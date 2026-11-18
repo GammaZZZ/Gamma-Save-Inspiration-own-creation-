@@ -48,6 +48,16 @@
   background: #edf1f6;
 }
 
+.lab-stage--ascii {
+  padding: 0;
+  background: #eaeae4;
+  color: #20231e;
+}
+
+@media (pointer: coarse) {
+  .lab-demo-ascii canvas { touch-action: pan-y !important; }
+}
+
 .lab-demo-orb {
   max-height: 100%;
   max-width: min(100%, var(--lab-orb-fit, 100%)) !important;
@@ -154,7 +164,9 @@ html.lab-dialog-open { overflow: hidden; }
 .lab-detail p { margin: 7px 0 14px; color: var(--ink-2); }
 .lab-detail-footer {
   display: flex;
+  flex-wrap: wrap;
   justify-content: flex-start;
+  gap: 8px 14px;
   margin-top: auto;
   padding-top: 14px;
 }

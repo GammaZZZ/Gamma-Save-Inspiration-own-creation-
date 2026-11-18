@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import DotPortrait from "./sources/DotPortrait.tsx";
 import HoverBloomText from "./sources/HoverBloomText.tsx";
 import { LiquidOrb, PALETTES } from "./sources/LiquidOrb.jsx";
+import { AsciiPortrait } from "./sources/AsciiPortrait.jsx";
 
 export const components = [
   {
@@ -30,8 +31,18 @@ export const components = [
     keywords: "React 文字 字体 悬停 光晕 Canvas",
     files: ["HoverBloomText.tsx"],
   },
+  {
+    id: "ascii-portrait",
+    name: "ASCII Portrait",
+    hint: "滑过留下字符尾迹，轻触激起涟漪",
+    description: "字符与墨点组成的互动肖像。移动光标或手指留下尾迹，点按可以激起涟漪。",
+    keywords: "React ASCII 字符 点阵 肖像 动效 Canvas 涟漪",
+    files: ["AsciiPortrait.jsx", "portrait-wake.js"],
+    standalone: "ASCII Portrait.html",
+  },
 ];
 
+const sourceURL = file => new URL("./sources/" + file, import.meta.url).href;
 const PALETTE_NAMES = { blue: "蓝色", green: "绿色", purple: "紫色", orange: "橙色" };
 const FLOW_NAMES = { wave: "波浪", jelly: "果冻", bloom: "扩散" };
 const BLOOM_LINES = ["Hover Bloom", "Move across the letters."];
@@ -49,6 +60,9 @@ function defaults(id) {
     };
   }
   if (id === "dot-portrait") return { theme: "auto", cool: true };
+  if (id === "ascii-portrait") {
+    return { theme: "Paper", glyphs: "Classic", size: 4.5, ripple: true, original: false };
+  }
   return { text: BLOOM_LINES.join("\n"), active: true };
 }
 
@@ -91,12 +105,54 @@ function Bloom({ settings }) {
   return <HoverBloomText className="lab-demo-bloom" lines={display} />;
 }
 
+let asciiArtworkRequest;
+
+function loadAsciiArtwork(file) {
+  if (!asciiArtworkRequest) {
+    asciiArtworkRequest = fetch(sourceURL(file)).then(async response => {
+      if (!response.ok) throw new Error("Portrait file could not be opened");
+      const html = await response.text();
+      const doc = new DOMParser().parseFromString(html, "text/html");
+      const { image, matte } = JSON.parse(doc.getElementById("payload").textContent);
+      if (!image?.startsWith("data:image/jpeg;base64,") || !matte?.startsWith("data:image/png;base64,")) {
+        throw new Error("Portrait assets are missing");
+      }
+      return { image, matte };
+    }).catch(error => {
+      asciiArtworkRequest = null;
+      throw error;
+    });
+  }
+  return asciiArtworkRequest;
+}
+
+function AsciiPreview({ file, settings }) {
+  const [art, setArt] = useState(null);
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    let active = true;
+    loadAsciiArtwork(file).then(
+      value => { if (active) setArt(value); },
+      () => { if (active) setFailed(true); },
+    );
+    return () => { active = false; };
+  }, [file]);
+
+  if (!art) return <p role="status">{failed ? "预览加载失败，可打开完整工作台。" : "正在加载肖像…"}</p>;
+  const { original, ...effect } = settings;
+  return (
+    <AsciiPortrait src={art.image} matte={art.matte} original={original} settings={effect}
+                   className="lab-demo-ascii" style={{position: "absolute", inset: 0, aspectRatio: "auto"}} />
+  );
+}
+
 function Preview({ item, settings, tile }) {
   const [orbPlaying, setOrbPlaying] = useState(false);
   const layer = tile ? "tile" : "modal";
   const scheme =
     item.id === "dot-portrait" && settings.theme !== "auto" ? " lab-stage--" + settings.theme :
-    item.id === "hover-bloom" ? " lab-stage--bloom" : "";
+    item.id === "hover-bloom" ? " lab-stage--bloom" :
+    item.id === "ascii-portrait" ? " lab-stage--ascii" : "";
   return (
     <div className={"lab-stage lab-stage--" + layer + scheme}>
       {item.id === "liquid-orb" && (tile ? (
@@ -108,6 +164,7 @@ function Preview({ item, settings, tile }) {
       ) : <LiquidOrb {...settings} className="lab-demo-orb" label="流体渐变球" />)}
       {item.id === "dot-portrait" && <Portrait settings={settings} />}
       {item.id === "hover-bloom" && <Bloom settings={settings} />}
+      {item.id === "ascii-portrait" && <AsciiPreview file={item.standalone} settings={settings} />}
     </div>
   );
 }
@@ -166,6 +223,28 @@ function Controls({ item, settings, change }) {
       </div>
     );
   }
+  if (item.id === "ascii-portrait") {
+    return (
+      <div className="lab-controls">
+        <Segments label="主题" options={{Paper: "纸面", Night: "夜色"}}
+                  value={settings.theme} onChange={theme => change({theme})} />
+        <Segments label="字符" options={{Classic: "经典", Blocks: "方块", Dots: "圆点", Binary: "01"}}
+                  value={settings.glyphs} onChange={glyphs => change({glyphs})} />
+        <Range label="颗粒大小" value={settings.size} min={3} max={10} step={.1} unit=" px"
+               onChange={size => change({size})} />
+        <label className="lab-control-row">
+          <span>点按涟漪</span>
+          <input type="checkbox" checked={settings.ripple}
+                 onChange={event => change({ripple: event.target.checked})} />
+        </label>
+        <label className="lab-control-row">
+          <span>查看原图</span>
+          <input type="checkbox" checked={settings.original}
+                 onChange={event => change({original: event.target.checked})} />
+        </label>
+      </div>
+    );
+  }
 
   return (
     <div className="lab-controls">
@@ -208,8 +287,6 @@ function Controls({ item, settings, change }) {
     </div>
   );
 }
-
-const sourceURL = file => new URL("./sources/" + file, import.meta.url).href;
 
 function SourcePanel({ item }) {
   const [file, setFile] = useState(item.files[0]);
@@ -329,8 +406,11 @@ function Playground({ item, onClose }) {
           <p>{item.description}</p>
           <Controls item={item} settings={settings} change={change} />
           <div className="lab-detail-footer">
-            <a href={sourceURL(item.download || item.files[0])} download>
-              {item.download ? "下载 React 源码包" : "下载 TSX 源码"}
+            {item.standalone && (
+              <a href={sourceURL(item.standalone)} target="_blank" rel="noopener">打开完整工作台 ↗</a>
+            )}
+            <a href={sourceURL(item.standalone || item.download || item.files[0])} download>
+              {item.standalone ? "下载 HTML" : item.download ? "下载 React 源码包" : "下载 TSX 源码"}
             </a>
           </div>
         </aside>
