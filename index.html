@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>设计工具索引</title>
-<link rel="stylesheet" href="./lab/gallery.css?v=3">
+<link rel="stylesheet" href="./lab/gallery.css?v=4">
 <style>
 :root{
   --bg:#FFFFFF; --side:#F7F9FC; --panel:#EDF1F7; --tile:#EFF2F7; --hover:#F0F4FA;
@@ -516,7 +516,7 @@ function render(){
   all().forEach(it => counts[it.c] = (counts[it.c]||0) + 1);
   document.getElementById("nav").innerHTML =
     `<button class="nav-lab ${state.cat === LAB ? "on" : ""}" type="button" data-cat="${LAB}"
-        aria-pressed="${state.cat === LAB}">${LAB_ICON}组件实验室<span class="cnt">4</span></button>` +
+        aria-pressed="${state.cat === LAB}">${LAB_ICON}组件实验室<span class="cnt">5</span></button>` +
     CATS.map(c => `<button class="${state.cat===c.code && !state.q ? "on" : ""}" data-cat="${c.code}"
         type="button" title="${esc(c.note)}">${icon(c.code)}${esc(c.cn)}
         <span class="cnt">${counts[c.code]||0}</span></button>`).join("");
@@ -541,7 +541,7 @@ function render(){
       <div id="lab-gallery"><div class="empty" role="status">正在加载组件…</div></div>
     </section>`;
     const host = main.querySelector("#lab-gallery");
-    import("./lab/gallery.js?v=2")
+    import("./lab/gallery.js?v=3")
       .then(({mountGallery}) => {
         if (host.isConnected) labController = mountGallery(host, state.q);
       })

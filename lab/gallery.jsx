@@ -4,6 +4,7 @@ import DotPortrait from "./sources/DotPortrait.tsx";
 import HoverBloomText from "./sources/HoverBloomText.tsx";
 import { LiquidOrb, PALETTES } from "./sources/LiquidOrb.jsx";
 import { AsciiPortrait } from "./sources/AsciiPortrait.jsx";
+import GradientBackground, { defaultGradient } from "./sources/GradientBackground.tsx";
 
 export const components = [
   {
@@ -40,6 +41,14 @@ export const components = [
     files: ["AsciiPortrait.jsx", "portrait-wake.js"],
     standalone: "ASCII Portrait.html",
   },
+  {
+    id: "gradient-background",
+    name: "Gradient Background",
+    hint: "调整渐变、色标和纹理",
+    description: "由多层渐变叠出的背景。选中一层，调整颜色、渐变类型和纹理。",
+    keywords: "GradientBackground React Canvas 渐变 背景 纹理 网格 丝绸",
+    files: ["GradientBackground.tsx"],
+  },
 ];
 
 const sourceURL = file => new URL("./sources/" + file, import.meta.url).href;
@@ -48,6 +57,15 @@ const FLOW_NAMES = { wave: "波浪", jelly: "果冻", bloom: "扩散" };
 const BLOOM_LINES = ["Hover Bloom", "Move across the letters."];
 const COOL_PORTRAIT = ["#3175db", "#9e83f5"];
 const COOL_PORTRAIT_DARK = ["#68a8ff", "#c1a4ff"];
+const GRADIENT_LAYERS = { field: "底层", fold: "丝绸", light: "高光" };
+const GRADIENT_EFFECTS = {
+  mesh: "网格", radial: "径向", linear: "线性", flow: "流动",
+  silk: "丝绸", conic: "锥形", reflected: "镜像",
+};
+const GRADIENT_TEXTURES = {
+  none: "无", grain: "颗粒", paper: "纸纹", fluted: "竖纹", scanline: "扫描线",
+  grid: "网格", dots: "圆点", hatch: "交叉线", moire: "摩尔纹",
+};
 
 function defaults(id) {
   if (id === "liquid-orb") {
@@ -62,6 +80,9 @@ function defaults(id) {
   if (id === "dot-portrait") return { theme: "auto", cool: true };
   if (id === "ascii-portrait") {
     return { theme: "Paper", glyphs: "Classic", size: 4.5, ripple: true, original: false };
+  }
+  if (id === "gradient-background") {
+    return { layerId: defaultGradient.layers[0].id, config: defaultGradient };
   }
   return { text: BLOOM_LINES.join("\n"), active: true };
 }
@@ -165,6 +186,12 @@ function Preview({ item, settings, tile }) {
       {item.id === "dot-portrait" && <Portrait settings={settings} />}
       {item.id === "hover-bloom" && <Bloom settings={settings} />}
       {item.id === "ascii-portrait" && <AsciiPreview file={item.standalone} settings={settings} />}
+      {item.id === "gradient-background" && (
+        <div className="lab-demo-gradient" role="img" aria-label="多图层渐变背景">
+          <GradientBackground config={settings.config} width={tile ? 420 : 600}
+                              height={tile ? 252 : 360} style={{height: "100%", objectFit: "cover"}} />
+        </div>
+      )}
     </div>
   );
 }
@@ -195,7 +222,59 @@ function Range({ label, value, min, max, step, unit, onChange }) {
   );
 }
 
+function GradientControls({ settings, change }) {
+  const { config, layerId } = settings;
+  const layer = config.layers.find(entry => entry.id === layerId);
+
+  function editLayer(patch) {
+    const layers = config.layers.map(entry => entry.id === layerId ? {...entry, ...patch} : entry);
+    change({ config: {...config, layers} });
+  }
+
+  return (
+    <div className="lab-controls">
+      <Segments label="图层" options={GRADIENT_LAYERS} value={layerId}
+                onChange={id => change({layerId: id})} />
+      <label className="lab-control-row">
+        <span>渐变类型</span>
+        <select value={layer.effect} onChange={event => editLayer({effect: event.target.value})}>
+          {Object.entries(GRADIENT_EFFECTS).map(([value, name]) => <option key={value} value={value}>{name}</option>)}
+        </select>
+      </label>
+      <label className="lab-control-row">
+        <span>纹理</span>
+        <select value={layer.texture} onChange={event => editLayer({texture: event.target.value})}>
+          {Object.entries(GRADIENT_TEXTURES).map(([value, name]) => <option key={value} value={value}>{name}</option>)}
+        </select>
+      </label>
+      <Range label="角度" value={layer.angle} min={-180} max={180} step={1} unit="°"
+             onChange={angle => editLayer({angle})} />
+      <Range label="不透明度" value={layer.opacity} min={0} max={100} step={1} unit="%"
+             onChange={opacity => editLayer({opacity})} />
+      <div className="lab-control-row">
+        <span>色标</span>
+        <div className="lab-swatches" role="group" aria-label="当前图层的色标">
+          {layer.colors.map((color, index) => (
+            <input key={index} type="color" className="lab-color-input" aria-label={`色标 ${index + 1}`}
+                   value={color} onChange={event => {
+                     const colors = [...layer.colors];
+                     colors[index] = event.target.value;
+                     editLayer({colors});
+                   }} />
+          ))}
+        </div>
+      </div>
+      <label className="lab-control-row">
+        <span>显示图层</span>
+        <input type="checkbox" checked={layer.visible}
+               onChange={event => editLayer({visible: event.target.checked})} />
+      </label>
+    </div>
+  );
+}
+
 function Controls({ item, settings, change }) {
+  if (item.id === "gradient-background") return <GradientControls settings={settings} change={change} />;
   if (item.id === "dot-portrait") {
     return (
       <div className="lab-controls">
