@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>设计工具索引</title>
-<link rel="stylesheet" href="./lab/gallery.css?v=5">
+<link rel="stylesheet" href="./lab/gallery.css?v=6">
 <style>
 :root{
   --bg:#FFFFFF; --side:#F7F9FC; --panel:#EDF1F7; --tile:#EFF2F7; --hover:#F0F4FA;
@@ -541,7 +541,7 @@ function render(){
       <div id="lab-gallery"><div class="empty" role="status">正在加载组件…</div></div>
     </section>`;
     const host = main.querySelector("#lab-gallery");
-    import("./lab/gallery.js?v=4")
+    import("./lab/gallery.js?v=5")
       .then(({mountGallery}) => {
         if (host.isConnected) labController = mountGallery(host, state.q);
       })

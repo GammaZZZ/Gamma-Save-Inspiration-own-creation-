@@ -1,0 +1,1927 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Gradient Studio</title>
+<style>:root {
+  --page: #f5f5f2;
+  --surface: #fdfdfb;
+  --stage: #edeeeb;
+  --line: #e2e4df;
+  --ink: #19201f;
+  --muted: #646b68;
+  --wash: #f4f5f1;
+  --accent: #295e69;
+  --selected: #e6efed;
+  --radius: 24px;
+  color: var(--ink);
+  font: 14px/1.45 -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif;
+  font-synthesis: none;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+body { margin: 0; min-width: 320px; background: var(--page); }
+[hidden] { display: none !important; }
+button, input, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+button:disabled { cursor: default; opacity: .36; }
+button, input, select { -webkit-tap-highlight-color: transparent; }
+:focus-visible { outline: 2px solid #357c8d; outline-offset: 3px; }
+h1, h2, h3, p { margin: 0; }
+svg { width: 16px; height: 16px; flex: none; }
+.topbar { border-bottom: 1px solid var(--line); background: var(--surface); }
+.top-inner {
+  width: min(100%, 1632px);
+  min-height: 64px;
+  padding: 0 32px;
+  margin: auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.brand, .history { display: flex; align-items: center; gap: 10px; }
+.brand h1 { font-size: 17px; font-weight: 680; letter-spacing: -.045em; }
+.brand-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 9px;
+  background: radial-gradient(ellipse at 75% 20%, #edf7dc, transparent 48%), radial-gradient(ellipse at 75% 93%, #5065a9, transparent 66%), linear-gradient(140deg, #cfe8dd, #33869b 57%, #223b58);
+  box-shadow: inset 0 0 0 1px #19425221;
+}
+.history { gap: 3px; }
+.history .icon-button { border: 1px solid var(--line); }
+.history .icon-button + .icon-button { margin-left: 3px; }
+
+.workspace {
+  max-width: 1632px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 325px;
+  align-items: start;
+  gap: 18px;
+  margin: auto;
+  padding: 20px 32px 24px;
+}
+.studio { min-width: 0; display: grid; gap: 14px; }
+.panel { border-radius: var(--radius); border: 1px solid var(--line); background: var(--surface); min-width: 0; }
+.stage {
+  background: var(--stage);
+  padding: 14px 17px 0;
+  min-width: 0;
+}
+.stage-head, .stage-foot, .preset-head, .section-head, .dialog-head, .code-top, .inspector-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.stage-head { margin: 0 0 14px; }
+.segmented {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 11px;
+  background: #e1e4df;
+  min-height: 36px;
+}
+.segmented button {
+  border: 0;
+  background: transparent;
+  color: #59615e;
+  padding: 5px 13px;
+  min-height: 28px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 630;
+}
+.segmented button[aria-selected=true] { color: var(--ink); background: var(--surface); box-shadow: 0 1px 2px #16211f13; }
+.outline-button, .quiet-button, .icon-button {
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  white-space: nowrap;
+  font-weight: 590;
+  transition: background-color 120ms ease, border-color 120ms ease;
+}
+.outline-button { border: 1px solid #d9ddd6; background: var(--surface); padding: 6px 10px; font-size: 12px; }
+.outline-button:not(:disabled):hover { background: #e9efeb; border-color: #c6d3cc; }
+.add-layer, .palette-toggle { width: 27px; height: 27px; border-color: var(--line); background: var(--wash); }
+.add-layer svg, .palette-toggle svg { width: 14px; height: 14px; }
+.quiet-button { border: 1px solid transparent; background: transparent; padding: 4px 7px; font-size: 12px; color: var(--muted); }
+.quiet-button:not(:disabled):hover, .icon-button:not(:disabled):hover { color: var(--ink); background: #e9ece7; }
+.icon-button { width: 30px; height: 30px; padding: 0; border: 1px solid transparent; background: transparent; color: #505957; }
+.controls-toggle { background: #f2f3ef; border-color: #d9ddd7; }
+.controls-toggle span { width: 7px; height: 7px; border: 1px solid #8b9b97; border-radius: 50%; }
+.controls-toggle[aria-pressed=true] span { background: #457c82; border-color: #457c82; }
+
+.artboard { width: 100%; aspect-ratio: 16/9; position: relative; overflow: hidden; border-radius: 15px; background: #7faab8; isolation: isolate; box-shadow: 0 2px 9px #172b2a14; }
+.artboard canvas { display: block; width: 100%; height: 100%; }
+.canvas-controls { position: absolute; inset: 0; pointer-events: none; }
+.layer-pin { position: absolute; z-index: 1; }
+.layer-pin.is-picked { z-index: 2; }
+.layer-pin.is-dragging { z-index: 3; }
+.pin-leader {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 1px;
+  background: #f8fffedb;
+  box-shadow: 0 0 2px #18323556;
+  transform-origin: left center;
+}
+.position-handle, .resize-handle {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1.5px solid white;
+  border-radius: 50%;
+  pointer-events: auto;
+  touch-action: none;
+  color: white;
+}
+.position-handle {
+  z-index: 1;
+  left: 0;
+  top: 0;
+  width: 33px;
+  height: 33px;
+  background: var(--layer-fill);
+  box-shadow: 0 1px 5px #0b282a80;
+  cursor: grab;
+}
+.position-handle svg {
+  width: 17px;
+  height: 17px;
+  padding: 2px;
+  border-radius: 50%;
+  background: #15292a78;
+}
+.position-handle:hover, .layer-pin.is-picked .position-handle {
+  box-shadow: 0 0 0 2px #153938bd, 0 2px 8px #15383380;
+}
+.position-handle:active { cursor: grabbing; }
+.resize-handle {
+  left: var(--corner-x);
+  top: var(--corner-y);
+  width: 24px;
+  height: 24px;
+  border-radius: 8px;
+  background: #23403d;
+  box-shadow: 0 1px 4px #162a2c79;
+  cursor: nwse-resize;
+}
+.resize-handle:is([data-sx="-1"][data-sy="1"], [data-sx="1"][data-sy="-1"]) { cursor: nesw-resize; }
+.resize-handle svg { width: 12px; height: 12px; scale: var(--flip-x) var(--flip-y); }
+.resize-guide {
+  position: absolute;
+  translate: -50% -50%;
+  border: 1px dashed #fff;
+  border-radius: 50%;
+  box-shadow: 0 0 1px 1px #1a302c4d;
+}
+.canvas-hint { display: flex; align-items: center; gap: 7px; color: #52605b; font-size: 10.5px; }
+.stage-foot { min-height: 48px; }
+.art-name { color: #3e4a46; font-weight: 670; font-size: 12.5px; letter-spacing: -.015em; }
+.canvas-meta { display: flex; align-items: center; gap: 9px; color: #545e5a; font-size: 11px; font-variant-numeric: tabular-nums; }
+.separator { width: 3px; height: 3px; background: #838d87; border-radius: 100%; }
+
+#code-pane {
+  aspect-ratio: 16/9;
+  background: #1c2324;
+  color: #e4efe9;
+  border-radius: 15px;
+  overflow: hidden;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+}
+.code-top { border-bottom: 1px solid #ffffff20; padding: 10px 13px; font-size: 11px; font-family: ui-monospace, monospace; }
+.code-top .outline-button { border-color: #ffffff38; background: #ffffff0d; color: inherit; }
+.code-top .outline-button:hover { background: #ffffff25; }
+#code-pane pre { margin: 0; padding: 16px; overflow: auto; font-size: 11.5px; line-height: 1.6; tab-size: 2; }
+
+.preset-panel { padding: 10px 13px 12px; }
+.preset-head { padding: 0 2px 7px; }
+.preset-head h2, .dialog-head h2 { font-size: 14px; font-weight: 680; letter-spacing: -.025em; }
+.preset-actions, .carousel-buttons { display: flex; align-items: center; gap: 4px; }
+.preset-actions { gap: 8px; }
+.preset-actions .icon-button { width: 24px; height: 24px; border: 1px solid #e0e3dc; }
+.preset-actions .icon-button svg { width: 13px; height: 13px; }
+#preset-count, #dialog-count, #layer-count { margin-left: 2px; color: #737d76; font-size: 11px; font-weight: 510; font-variant-numeric: tabular-nums; }
+.preset-strip {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: calc((100% - 40px) / 6);
+  gap: 8px;
+  padding: 3px 2px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+}
+.preset-strip::-webkit-scrollbar { display: none; }
+.preset-card {
+  width: 100%;
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+  padding: 3px 3px 5px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  text-align: left;
+  scroll-snap-align: start;
+  color: #495451;
+}
+.preset-card:hover { border-color: #d8e3df; background: #f0f4f1; }
+.preset-card[aria-pressed=true] { border-color: #a6c6bd; background: var(--selected); color: #193d3d; }
+.preset-thumb { display: block; width: 100%; aspect-ratio: 16/9; border-radius: 6px; }
+.preset-name { display: block; font-size: 11px; font-weight: 630; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; padding: 0 3px; }
+
+.inspector {
+  min-height: 0;
+  max-height: min(950px, calc(100dvh - 105px));
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.inspector-header { flex: none; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+.inspector-title { display: flex; align-items: center; gap: 9px; }
+.inspector-title h2 { font-size: 17px; font-weight: 690; letter-spacing: -.04em; }
+#tweak-icon { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 8px; color: #355c5a; background: #e6edeb; }
+#tweak-icon svg { width: 15px; height: 15px; }
+.reset-button { padding-right: 0; }
+.inspector-scroll { flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: thin; scrollbar-color: #cfd8d2 transparent; }
+.inspector-section { padding: 10px 15px 12px; border-bottom: 1px solid var(--line); }
+.section-head { min-height: 27px; margin-bottom: 6px; }
+.section-head h3 { font-size: 12.5px; font-weight: 680; letter-spacing: -.012em; }
+.layers { display: grid; gap: 4px; }
+.layer-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2px;
+  border: 1px solid #e8ebe5;
+  border-radius: 9px;
+  min-width: 0;
+  background: #f7f8f4;
+}
+.layer-row:has(.layer-select[aria-pressed=true]) { background: var(--selected); border-color: #b6cfc7; }
+.layer-row.is-hidden .layer-select { opacity: .54; }
+.layer-select {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 5px 4px 7px;
+  min-width: 0;
+  min-height: 31px;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  border-radius: 8px;
+}
+.layer-chip { flex: none; width: 28px; height: 19px; border-radius: 4px; box-shadow: inset 0 0 0 1px #20282812; }
+.layer-name { font-size: 11.5px; font-weight: 640; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; }
+.layer-row .icon-button { width: 26px; height: 27px; margin-right: 2px; }
+.layer-row .icon-button svg { width: 14px; height: 14px; }
+.layer-row.drag-target { outline: 2px solid #508577; outline-offset: -1px; }
+.layer-tools { display: flex; gap: 2px; align-items: center; margin-top: 6px; }
+.layer-tools .icon-button { width: 26px; height: 25px; }
+.layer-tools .icon-button svg { width: 14px; height: 14px; }
+.tool-divider { width: 1px; height: 15px; background: var(--line); margin: 0 4px; }
+.base-color { margin-left: auto; display: flex; gap: 6px; align-items: center; color: #5f6962; font-size: 11px; }
+input[type=color] { display: block; cursor: pointer; border: 0; border-radius: 4px; background: transparent; padding: 0; margin: 0; width: 20px; height: 20px; }
+input[type=color]::-webkit-color-swatch-wrapper { padding: 0; }
+input[type=color]::-moz-color-swatch { border: 1px solid #1d2c2d25; border-radius: 4px; }
+input[type=color]::-webkit-color-swatch { border: 1px solid #1d2c2d25; border-radius: 4px; }
+.layer-colors { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
+.color-chip {
+  width: 27px;
+  height: 27px;
+  border: 1px solid #19282720;
+  padding: 0;
+  border-radius: 7px;
+  background: var(--swatch);
+  display: grid;
+  place-items: center;
+}
+.color-chip[aria-pressed=true] { box-shadow: 0 0 0 1px var(--surface), 0 0 0 2px #587e76; }
+.color-chip.add { border-style: dashed; color: #66756e; }
+.color-chip.add:hover { background: #edf2ec; }
+.color-controls { display: flex; gap: 3px; align-items: center; margin-top: 8px; }
+.color-controls .icon-button { width: 25px; height: 27px; }
+.color-controls .icon-button svg { width: 14px; height: 14px; }
+.hex-control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--wash);
+  padding: 3px 6px;
+  border-radius: 7px;
+  min-height: 28px;
+  margin-right: auto;
+  border: 1px solid var(--line);
+}
+.hex-control input[type=color] { width: 17px; height: 17px; }
+.hex-control input[type=text] { border: 0; background: transparent; padding: 0; width: 62px; font: 11px ui-monospace, monospace; }
+.hex-control input[aria-invalid=true] { color: #a3313c; }
+.palette-toggle[aria-expanded=true] { background: var(--selected); color: var(--accent); }
+.swatch-library { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; margin-top: 10px; }
+.swatch-library button { height: 17px; min-width: 0; border: 1px solid #14262222; border-radius: 4px; background: var(--swatch); }
+.swatch-library button:hover { outline: 1px solid #567469; outline-offset: 1px; }
+.field { display: grid; grid-template-columns: 85px minmax(0, 1fr); gap: 7px; align-items: center; margin-top: 5px; }
+.field label { color: #505b55; font-size: 11.5px; }
+.field select {
+  max-width: 100%;
+  min-height: 29px;
+  border: 1px solid #dfe4dd;
+  border-radius: 8px;
+  padding: 4px 7px;
+  background: var(--wash);
+  font-size: 11.5px;
+  font-weight: 580;
+}
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  white-space: nowrap;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+.style-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.style-field {
+  display: grid;
+  grid-template-columns: 17px minmax(0, 1fr);
+  align-items: center;
+  gap: 4px;
+  padding-left: 7px;
+  border: 1px solid #dfe4dd;
+  border-radius: 8px;
+  background: var(--wash);
+}
+.style-field label { display: grid; place-items: center; color: #547068; }
+.style-field select {
+  width: 100%;
+  border: 0;
+  padding: 5px 4px;
+  min-height: 31px;
+  border-radius: 7px;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 580;
+}
+.advanced-section { border-bottom: 0; padding-block: 6px; }
+.advanced-section summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 5px;
+  padding: 4px 0;
+  color: #56615c;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  list-style: none;
+}
+.advanced-section summary::-webkit-details-marker { display: none; }
+#details-icon { display: grid; place-items: center; width: 26px; height: 26px; }
+.advanced-section[open] #details-icon { rotate: 180deg; }
+.advanced-fields { padding-bottom: 7px; }
+.advanced-fields > div + div:not([hidden]) { margin-top: 5px; }
+.slider-row { display: grid; grid-template-columns: 85px minmax(0,1fr) 45px; gap: 7px; min-height: 28px; align-items: center; }
+.slider-row label { color: #505b55; font-size: 11.5px; }
+input[type=range] { appearance: none; width: 100%; height: 4px; padding: 0; border: 0; border-radius: 99px; background: linear-gradient(to right, #739b91 0 var(--fill), #e3e8e2 var(--fill) 100%); margin: 0; cursor: ew-resize; }
+input[type=range]::-webkit-slider-thumb { appearance: none; width: 12px; height: 12px; border-radius: 50%; background: white; border: 1px solid #82a097; box-shadow: 0 1px 2px #223b372c; }
+input[type=range]::-moz-range-thumb { width: 11px; height: 11px; border-radius: 50%; background: white; border: 1px solid #82a097; box-shadow: 0 1px 2px #223b372c; }
+.numeric {
+  width: 100%;
+  min-width: 0;
+  text-align: right;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--wash);
+  padding: 3px 4px;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  appearance: textfield;
+}
+.numeric::-webkit-inner-spin-button, .numeric::-webkit-outer-spin-button { appearance: none; margin: 0; }
+.export-bar { flex: none; display: grid; grid-template-columns: 1.65fr 1fr; gap: 7px; padding: 12px 13px; border-top: 1px solid var(--line); background: var(--surface); }
+.export-bar button {
+  height: 39px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 630;
+}
+.download-png { background: #22302d; border: 1px solid #22302d; color: white; }
+.download-png:hover { background: #334840; }
+.download-react { background: var(--surface); border: 1px solid #cdd5cc; }
+.download-react:hover { background: #ecf1ec; }
+
+dialog {
+  width: min(745px, calc(100vw - 26px));
+  max-height: min(82dvh, 850px);
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  padding: 18px;
+  box-shadow: 0 16px 64px #15282524;
+}
+dialog::backdrop { background: #18262259; backdrop-filter: blur(4px); }
+.dialog-head { margin-bottom: 12px; }
+.preset-grid { display: grid; grid-template-columns: repeat(4,minmax(0, 1fr)); gap: 8px; }
+.toast {
+  z-index: 5;
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translate(-50%, 8px);
+  color: white;
+  background: #22302d;
+  padding: 9px 15px;
+  max-width: calc(100vw - 24px);
+  border-radius: 10px;
+  box-shadow: 0 3px 10px #16272125;
+  font-size: 12px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 160ms ease, transform 160ms ease;
+}
+.toast.is-visible { transform: translate(-50%, 0); opacity: 1; }
+
+@media (max-width: 1230px) {
+  .workspace { grid-template-columns: minmax(0,1fr) 315px; padding-inline: 24px; gap: 14px; }
+  .top-inner { padding-inline: 24px; }
+}
+@media (max-width: 1040px) {
+  .preset-strip { grid-auto-columns: calc((100% - 24px) / 4); }
+}
+@media (max-width: 830px) {
+  .workspace { grid-template-columns: minmax(0,1fr) 291px; padding-inline: 14px; gap: 10px; }
+  .top-inner { padding-inline: 14px; }
+  .stage { padding-inline: 11px; }
+  .canvas-hint { display: none; }
+  .preset-strip { grid-auto-columns: calc((100% - 16px) / 3); }
+  .inspector-section { padding-inline: 11px; }
+}
+@media (min-width: 701px) and (max-height: 810px) {
+  .top-inner { min-height: 56px; }
+  .workspace { padding-top: 15px; }
+  .stage { padding-top: 11px; }
+  .stage-head { margin-bottom: 10px; }
+  .stage-foot { min-height: 38px; }
+  .artboard, #code-pane { max-width: max(390px, calc((100dvh - 331px) * 16 / 9)); margin-inline: auto; }
+  .inspector { max-height: calc(100dvh - 90px); }
+}
+@media (max-width: 700px) {
+  .top-inner { min-height: 54px; }
+  .workspace { grid-template-columns: 1fr; padding-top: 12px; }
+  .inspector { max-height: none; }
+  .inspector-scroll { overflow: visible; }
+  .panel { border-radius: 17px; }
+  .stage-head { margin-bottom: 9px; }
+  .artboard, #code-pane { border-radius: 10px; }
+  #code-pane { min-height: 215px; }
+  .preset-strip { grid-auto-columns: calc((100% - 16px) / 3); }
+  .preset-grid { grid-template-columns: repeat(3,minmax(0,1fr)); }
+  .preset-panel { padding: 7px 10px 9px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; }
+}
+</style>
+<link rel="stylesheet" href="./theme.css">
+<script>
+if (window.parent !== window) {
+  document.documentElement.setAttribute("data-lab-embedded", "");
+  window.addEventListener("keydown", event => {
+    if (event.key === "Escape" && !event.defaultPrevented && !document.querySelector("dialog[open]")) {
+      window.parent.postMessage("gradient-studio:close", location.origin);
+    }
+  });
+}
+</script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="top-inner">
+      <div class="brand"><span class="brand-icon" aria-hidden="true"></span><h1>Gradient Studio</h1></div>
+      <div class="history">
+        <button class="icon-button" type="button" data-action="undo" title="Undo (⌘/Ctrl+Z)" aria-label="Undo" disabled></button>
+        <button class="icon-button" type="button" data-action="redo" title="Redo (⌘/Ctrl+Shift+Z)" aria-label="Redo" disabled></button>
+      </div>
+    </div>
+  </header>
+
+  <main class="workspace">
+    <div class="studio">
+      <section class="stage panel" aria-label="Gradient canvas">
+        <div class="stage-head">
+          <div class="segmented" role="tablist" aria-label="Canvas view">
+            <button id="preview-tab" role="tab" aria-selected="true" aria-controls="preview-pane" type="button">Preview</button>
+            <button id="code-tab" role="tab" aria-selected="false" aria-controls="code-pane" type="button">Code</button>
+          </div>
+          <button class="outline-button controls-toggle" id="toggle-handles" type="button" aria-pressed="true" title="Show or hide canvas controls"><span></span> Handles</button>
+        </div>
+        <div id="preview-pane" role="tabpanel" aria-labelledby="preview-tab">
+          <div class="artboard" id="artboard">
+            <canvas id="preview" width="960" height="540" aria-label="Live preview of the gradient"></canvas>
+            <div id="canvas-controls" class="canvas-controls" role="group" aria-label="Layer controls">
+              <div id="resize-guide" class="resize-guide" aria-hidden="true" hidden></div>
+            </div>
+          </div>
+        </div>
+        <div id="code-pane" role="tabpanel" aria-labelledby="code-tab" hidden>
+          <div class="code-top"><span>GradientBackground.tsx</span><button class="outline-button" data-action="copy" type="button">Copy code</button></div>
+          <pre tabindex="0"><code id="source-view"></code></pre>
+        </div>
+        <div class="stage-foot">
+          <span class="art-name" id="art-name">Tidal Mist</span>
+          <span class="canvas-hint" id="canvas-hint">Drag a dot to move <span class="separator"></span> Drag its corner to resize</span>
+          <span class="canvas-meta">1920 × 1080 <span class="separator"></span> 16:9</span>
+        </div>
+      </section>
+
+      <section class="preset-panel panel" aria-labelledby="preset-title">
+        <div class="preset-head">
+          <h2 id="preset-title">Presets</h2>
+          <div class="preset-actions">
+            <button type="button" class="quiet-button" data-action="all-presets">Browse all <span id="preset-count"></span></button>
+            <div class="carousel-buttons">
+              <button type="button" class="icon-button" data-action="presets-prev" aria-label="Previous presets" disabled></button>
+              <button type="button" class="icon-button" data-action="presets-next" aria-label="Next presets"></button>
+            </div>
+          </div>
+        </div>
+        <div id="preset-strip" class="preset-strip" aria-label="Gradient presets"></div>
+      </section>
+    </div>
+
+    <aside class="inspector panel" aria-labelledby="tweak-title">
+      <div class="inspector-header">
+        <div class="inspector-title"><div id="tweak-icon" aria-hidden="true"></div><h2 id="tweak-title">Tweak</h2></div>
+        <button class="quiet-button reset-button" data-action="reset" type="button">Reset</button>
+      </div>
+      <div class="inspector-scroll">
+        <section class="inspector-section layers-section" aria-labelledby="layers-title">
+          <div class="section-head">
+            <h3 id="layers-title">Layers <span id="layer-count"></span></h3>
+            <button class="icon-button add-layer" data-action="add-layer" type="button" aria-label="Add layer" title="Add layer"></button>
+          </div>
+          <div id="layer-list" class="layers"></div>
+          <div class="layer-tools" id="layer-tools">
+            <button class="icon-button" type="button" data-action="raise" aria-label="Move layer forward" title="Move forward"></button>
+            <button class="icon-button" type="button" data-action="lower" aria-label="Move layer backward" title="Move backward"></button>
+            <span class="tool-divider"></span>
+            <button class="icon-button" type="button" data-action="duplicate" aria-label="Duplicate layer" title="Duplicate layer"></button>
+            <button class="icon-button" type="button" data-action="delete" aria-label="Delete layer" title="Delete layer"></button>
+            <label class="base-color" title="Canvas base color"><input type="color" aria-label="Canvas base color" id="base-color"></label>
+          </div>
+        </section>
+
+        <div id="layer-settings">
+          <section class="inspector-section" aria-labelledby="color-title">
+            <div class="section-head"><h3 id="color-title">Colors</h3><button type="button" class="icon-button palette-toggle" data-action="swatches" aria-expanded="false" aria-controls="swatch-library" aria-label="Open color swatches" title="Color swatches"></button></div>
+            <div id="layer-colors" class="layer-colors"></div>
+            <div class="color-controls">
+              <div class="hex-control"><input type="color" id="active-color" aria-label="Choose color"><input type="text" id="active-hex" maxlength="7" spellcheck="false" aria-label="Hex color"></div>
+              <button type="button" class="icon-button" data-action="color-left" aria-label="Move color stop left" title="Move selected color left"></button>
+              <button type="button" class="icon-button" data-action="color-right" aria-label="Move color stop right" title="Move selected color right"></button>
+              <button type="button" class="icon-button" data-action="remove-color" aria-label="Remove selected color" title="Remove selected color"></button>
+            </div>
+            <div id="swatch-library" class="swatch-library" hidden aria-label="Color swatches"></div>
+          </section>
+
+          <section class="inspector-section style-section" aria-labelledby="effect-title">
+            <div class="section-head"><h3 id="effect-title">Style</h3></div>
+            <div class="style-fields">
+              <div class="style-field"><label for="effect" id="effect-icon" title="Gradient effect"><span class="visually-hidden">Effect</span></label><select id="effect" data-prop="effect"></select></div>
+              <div class="style-field"><label for="texture" id="texture-icon" title="Texture"><span class="visually-hidden">Texture</span></label><select id="texture" data-prop="texture"></select></div>
+            </div>
+          </section>
+
+          <details class="inspector-section advanced-section">
+            <summary><span>Fine-tune</span><span id="details-icon" aria-hidden="true"></span></summary>
+            <div class="advanced-fields">
+              <div id="effect-fields"></div>
+              <div class="texture-fields" id="texture-fields"></div>
+              <div id="transform-fields"></div>
+              <div class="field"><label for="blend">Blend mode</label><select id="blend" data-prop="blend"></select></div>
+            </div>
+          </details>
+        </div>
+      </div>
+
+      <div class="export-bar">
+        <button type="button" class="download-png" data-action="png">Download PNG</button>
+        <button type="button" class="download-react" data-action="react" title="Download React component" aria-label="Download React component">React</button>
+      </div>
+    </aside>
+  </main>
+
+  <dialog id="presets-dialog" aria-labelledby="dialog-title">
+    <div class="dialog-head"><h2 id="dialog-title">Presets <span id="dialog-count"></span></h2><button type="button" class="icon-button" data-action="close-presets" aria-label="Close presets"></button></div>
+    <div id="preset-grid" class="preset-grid"></div>
+  </dialog>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+<script>"use strict"
+
+                                                                                                   
+                                                                                                                      
+                                                                                                        
+                             
+            
+              
+                        
+                          
+                      
+                  
+           
+           
+               
+                
+               
+                 
+                  
+              
+                  
+               
+              
+                  
+ 
+                                                                      
+
+                                   
+                                                            
+const layerCache = new WeakMap                                            ()
+const tau = Math.PI * 2
+
+function limit(value        ) {
+  return Math.min(1, Math.max(0, value))
+}
+
+function ease(value        ) {
+  return value * value * (3 - 2 * value)
+}
+
+function fract(value        ) {
+  return value - Math.floor(value)
+}
+
+function rgb(hex        )      {
+  const digits = hex.slice(1)
+  const value = parseInt(digits.length === 3 ? digits.split("").map(digit => digit + digit).join("") : digits, 16)
+  return [(value >> 16) & 255, (value >> 8) & 255, value & 255]
+}
+
+function hash(x        , y        , seed        ) {
+  let n = Math.imul(x + 101, 374761393) ^ Math.imul(y + 29, 668265263) ^ Math.imul(seed + 7, 1442695041)
+  n = Math.imul(n ^ (n >>> 13), 1274126177)
+  return ((n ^ (n >>> 16)) >>> 0) / 4294967296
+}
+
+function textureAt(kind                 , u        , v        , x        , y        , scale        , seed        ) {
+  const a = u * 32 / scale
+  const b = v * 32 / scale
+
+  switch (kind) {
+    case "grain":
+      return hash(Math.floor(x / scale), Math.floor(y / scale), seed) - 0.5
+    case "paper": {
+      const fiberX = Math.floor(x / (1.3 * scale))
+      const fiberY = Math.floor(y / (3.6 * scale))
+      return (hash(fiberX, fiberY, seed) - 0.5) * 0.62 + (hash(x, y, seed + 1) - 0.5) * 0.38
+    }
+    case "fluted":
+      return Math.pow(Math.max(0, Math.cos(a * tau)), 12) * 0.63 - Math.sin(a * tau) * 0.22 - 0.1
+    case "scanline":
+      return Math.pow(Math.max(0, Math.cos(b * tau)), 9) - 0.27
+    case "grid":
+      return (Math.abs(fract(a + 0.5) - 0.5) < 0.036 || Math.abs(fract(b + 0.5) - 0.5) < 0.036) ? 0.56 : -0.055
+    case "dots": {
+      const dx = fract(a + 0.5) - 0.5
+      const dy = fract(b + 0.5) - 0.5
+      return (dx * dx + dy * dy < 0.031) ? 0.66 : -0.07
+    }
+    case "hatch":
+      return Math.pow(Math.max(0, Math.cos((a + b) * tau)), 11) * 0.58
+        + Math.pow(Math.max(0, Math.cos((a - b) * tau)), 11) * 0.43 - 0.18
+    case "moire":
+      return (Math.sin((a + 0.07 * b) * tau) + Math.sin((a - 0.11 * b + 0.33 * Math.sin(b * 0.19)) * tau)) * 0.34
+    default:
+      return 0
+  }
+}
+
+function rasterLayer(canvas                   , layer               ) {
+  const ctx = canvas.getContext("2d")
+  if (!ctx) return
+
+  const width = canvas.width
+  const height = canvas.height
+  const frame = ctx.createImageData(width, height)
+  const pixels = frame.data
+  const colors = layer.colors.map(rgb)
+  const stops = colors.length - 1
+  const radians = layer.angle * Math.PI / 180
+  const cos = Math.cos(radians)
+  const sin = Math.sin(radians)
+  const radiusX = Math.max(0.025, layer.width / 200)
+  const radiusY = Math.max(0.025, layer.height / 200)
+  const feather = Math.max(0.035, layer.softness / 100)
+  const warp = layer.warp / 100
+  const phase = layer.seed * 0.019
+  const textured = layer.texture !== "none" && layer.strength > 0
+  const strength = layer.strength * (layer.texture === "grain" || layer.texture === "paper" ? 0.88 : 1.16)
+  const scale = Math.max(0.25, layer.scale / 100)
+  const centerX = layer.x / 100
+  const centerY = layer.y / 100
+  const aspect = width / height
+  const meshPoints = colors.map((_, index) => ({
+    x: Math.cos(-2.5 + index * tau / colors.length + phase) * (0.51 + hash(index, 7, layer.seed) * 0.28),
+    y: Math.sin(-2.5 + index * tau / colors.length + phase) * (0.46 + hash(index, 9, layer.seed) * 0.26),
+  }))
+  const meshFalloff = 8.1 - feather * 5.3
+
+  for (let row = 0; row < height; row++) {
+    const dy = (row + 0.5) / height - centerY
+    const textureY = Math.floor((row + 0.5) * 1080 / height)
+    for (let col = 0; col < width; col++) {
+      const dx = (col + 0.5) / width - centerX
+      const u = (dx * cos + dy * sin / aspect) / radiusX
+      const v = (dy * cos - dx * sin * aspect) / radiusY
+      const distance = Math.hypot(u, v)
+      if (distance >= 1) continue
+
+      const offset = (row * width + col) * 4
+      const alpha = ease(limit((1 - distance) / feather))
+      let red = 0
+      let green = 0
+      let blue = 0
+      let t = 0
+      let light = 0
+
+      switch (layer.effect) {
+        case "mesh": {
+          const px = u + warp * Math.sin(v * 3.7 + phase) * 0.29
+          const py = v + warp * Math.sin(u * 4.8 - phase) * 0.29
+          let sum = 0
+          for (let index = 0; index < colors.length; index++) {
+            const cx = px - meshPoints[index].x
+            const cy = py - meshPoints[index].y
+            const influence = Math.exp(-(cx * cx + cy * cy) * meshFalloff)
+            sum += influence
+            red += colors[index][0] * influence
+            green += colors[index][1] * influence
+            blue += colors[index][2] * influence
+          }
+          red /= sum
+          green /= sum
+          blue /= sum
+          break
+        }
+        case "radial":
+          t = distance * (1.08 + 0.45 * warp)
+          break
+        case "linear":
+          t = 0.5 + u * (0.52 + 0.4 * warp)
+          break
+        case "flow": {
+          const bend = v + Math.sin(u * 3.2 + phase) * (0.19 + 0.58 * warp)
+          t = 0.5 + bend * 0.53 + Math.sin(u * 5.5 - bend * 4.4) * warp * 0.16
+          break
+        }
+        case "silk": {
+          const fold = v + Math.sin(u * 3.6 + phase) * (0.14 + warp * 0.34) + Math.sin(u * 7.1 + v * 3.6) * warp * 0.11
+          t = 0.5 + Math.sin(fold * (3.6 + warp * 3.1) + u * 1.36) * 0.40
+          const crease = Math.max(0, Math.cos(fold * 9.1 - u * 2.15 + phase))
+          light = Math.pow(crease, 8.5) * (20 + warp * 32) - 7
+          break
+        }
+        case "conic":
+          t = fract(Math.atan2(v, u) / tau + 0.5 + distance * warp * 0.44)
+          break
+        case "reflected":
+          t = Math.abs(v + Math.sin(u * 2.4 + phase) * warp * 0.32) * 1.3
+          break
+      }
+
+      if (layer.effect !== "mesh" && stops === 0) {
+        [red, green, blue] = colors[0]
+      } else if (layer.effect !== "mesh") {
+        const loop = layer.effect === "conic"
+        const stop = limit(t) * (loop ? colors.length : stops)
+        const index = Math.min(loop ? stops : stops - 1, Math.floor(stop))
+        const next = (index + 1) % colors.length
+        const f = stop - index
+        const mix = f + (ease(f) - f) * (0.25 + 0.65 * feather)
+        red = colors[index][0] + (colors[next][0] - colors[index][0]) * mix
+        green = colors[index][1] + (colors[next][1] - colors[index][1]) * mix
+        blue = colors[index][2] + (colors[next][2] - colors[index][2]) * mix
+      }
+
+      if (textured) {
+        const textureX = Math.floor((col + 0.5) * 1920 / width)
+        light += textureAt(layer.texture, u * radiusX * aspect, v * radiusY, textureX, textureY, scale, layer.seed) * strength
+      }
+
+      pixels[offset] = red + light
+      pixels[offset + 1] = green + light
+      pixels[offset + 2] = blue + light
+      pixels[offset + 3] = alpha * 255
+    }
+  }
+  ctx.putImageData(frame, 0, 0)
+}
+
+function drawGradient(canvas                   , config                ) {
+  const ctx = canvas.getContext("2d")
+  if (!ctx) return
+
+  const width = canvas.width
+  const height = canvas.height
+  const previous = layerCache.get(canvas) ?? new Map                    ()
+  const cache = new Map                    ()
+
+  ctx.clearRect(0, 0, width, height)
+  ctx.fillStyle = config.base
+  ctx.fillRect(0, 0, width, height)
+
+  for (const layer of config.layers) {
+    if (!layer.visible || layer.opacity === 0 || layer.colors.length === 0) continue
+    const { id, name, opacity, blend, visible, ...paint } = layer
+    const key = JSON.stringify([width, height, paint])
+    let entry = previous.get(id)
+    if (entry?.key !== key) {
+      const surface = entry?.canvas ?? canvas.ownerDocument.createElement("canvas")
+      if (surface.width !== width) surface.width = width
+      if (surface.height !== height) surface.height = height
+      rasterLayer(surface, layer)
+      entry = { key, canvas: surface }
+    }
+    cache.set(id, entry)
+    ctx.globalAlpha = opacity / 100
+    ctx.globalCompositeOperation = blend
+    ctx.drawImage(entry.canvas, 0, 0)
+  }
+
+  ctx.globalAlpha = 1
+  ctx.globalCompositeOperation = "source-over"
+  layerCache.set(canvas, cache)
+}
+
+const reactTemplate = "import { useEffect, useRef } from \"react\"\nimport type { CSSProperties } from \"react\"\n\nexport type GradientEffect = \"mesh\" | \"radial\" | \"linear\" | \"flow\" | \"silk\" | \"conic\" | \"reflected\"\nexport type GradientTexture = \"none\" | \"grain\" | \"paper\" | \"fluted\" | \"scanline\" | \"grid\" | \"dots\" | \"hatch\" | \"moire\"\nexport type GradientBlend = \"source-over\" | \"screen\" | \"multiply\" | \"soft-light\" | \"overlay\" | \"lighter\"\nexport type GradientLayer = {\n  id: string\n  name: string\n  effect: GradientEffect\n  texture: GradientTexture\n  blend: GradientBlend\n  colors: string[]\n  x: number\n  y: number\n  width: number\n  height: number\n  angle: number\n  opacity: number\n  softness: number\n  warp: number\n  strength: number\n  scale: number\n  seed: number\n  visible: boolean\n}\nexport type GradientConfig = { base: string; layers: GradientLayer[] }\n\ntype RGB = [number, number, number]\ntype CacheEntry = { key: string; canvas: HTMLCanvasElement }\nconst layerCache = new WeakMap<HTMLCanvasElement, Map<string, CacheEntry>>()\nconst tau = Math.PI * 2\n\nfunction limit(value: number) {\n  return Math.min(1, Math.max(0, value))\n}\n\nfunction ease(value: number) {\n  return value * value * (3 - 2 * value)\n}\n\nfunction fract(value: number) {\n  return value - Math.floor(value)\n}\n\nfunction rgb(hex: string): RGB {\n  const digits = hex.slice(1)\n  const value = parseInt(digits.length === 3 ? digits.split(\"\").map(digit => digit + digit).join(\"\") : digits, 16)\n  return [(value >> 16) & 255, (value >> 8) & 255, value & 255]\n}\n\nfunction hash(x: number, y: number, seed: number) {\n  let n = Math.imul(x + 101, 374761393) ^ Math.imul(y + 29, 668265263) ^ Math.imul(seed + 7, 1442695041)\n  n = Math.imul(n ^ (n >>> 13), 1274126177)\n  return ((n ^ (n >>> 16)) >>> 0) / 4294967296\n}\n\nfunction textureAt(kind: GradientTexture, u: number, v: number, x: number, y: number, scale: number, seed: number) {\n  const a = u * 32 / scale\n  const b = v * 32 / scale\n\n  switch (kind) {\n    case \"grain\":\n      return hash(Math.floor(x / scale), Math.floor(y / scale), seed) - 0.5\n    case \"paper\": {\n      const fiberX = Math.floor(x / (1.3 * scale))\n      const fiberY = Math.floor(y / (3.6 * scale))\n      return (hash(fiberX, fiberY, seed) - 0.5) * 0.62 + (hash(x, y, seed + 1) - 0.5) * 0.38\n    }\n    case \"fluted\":\n      return Math.pow(Math.max(0, Math.cos(a * tau)), 12) * 0.63 - Math.sin(a * tau) * 0.22 - 0.1\n    case \"scanline\":\n      return Math.pow(Math.max(0, Math.cos(b * tau)), 9) - 0.27\n    case \"grid\":\n      return (Math.abs(fract(a + 0.5) - 0.5) < 0.036 || Math.abs(fract(b + 0.5) - 0.5) < 0.036) ? 0.56 : -0.055\n    case \"dots\": {\n      const dx = fract(a + 0.5) - 0.5\n      const dy = fract(b + 0.5) - 0.5\n      return (dx * dx + dy * dy < 0.031) ? 0.66 : -0.07\n    }\n    case \"hatch\":\n      return Math.pow(Math.max(0, Math.cos((a + b) * tau)), 11) * 0.58\n        + Math.pow(Math.max(0, Math.cos((a - b) * tau)), 11) * 0.43 - 0.18\n    case \"moire\":\n      return (Math.sin((a + 0.07 * b) * tau) + Math.sin((a - 0.11 * b + 0.33 * Math.sin(b * 0.19)) * tau)) * 0.34\n    default:\n      return 0\n  }\n}\n\nfunction rasterLayer(canvas: HTMLCanvasElement, layer: GradientLayer) {\n  const ctx = canvas.getContext(\"2d\")\n  if (!ctx) return\n\n  const width = canvas.width\n  const height = canvas.height\n  const frame = ctx.createImageData(width, height)\n  const pixels = frame.data\n  const colors = layer.colors.map(rgb)\n  const stops = colors.length - 1\n  const radians = layer.angle * Math.PI / 180\n  const cos = Math.cos(radians)\n  const sin = Math.sin(radians)\n  const radiusX = Math.max(0.025, layer.width / 200)\n  const radiusY = Math.max(0.025, layer.height / 200)\n  const feather = Math.max(0.035, layer.softness / 100)\n  const warp = layer.warp / 100\n  const phase = layer.seed * 0.019\n  const textured = layer.texture !== \"none\" && layer.strength > 0\n  const strength = layer.strength * (layer.texture === \"grain\" || layer.texture === \"paper\" ? 0.88 : 1.16)\n  const scale = Math.max(0.25, layer.scale / 100)\n  const centerX = layer.x / 100\n  const centerY = layer.y / 100\n  const aspect = width / height\n  const meshPoints = colors.map((_, index) => ({\n    x: Math.cos(-2.5 + index * tau / colors.length + phase) * (0.51 + hash(index, 7, layer.seed) * 0.28),\n    y: Math.sin(-2.5 + index * tau / colors.length + phase) * (0.46 + hash(index, 9, layer.seed) * 0.26),\n  }))\n  const meshFalloff = 8.1 - feather * 5.3\n\n  for (let row = 0; row < height; row++) {\n    const dy = (row + 0.5) / height - centerY\n    const textureY = Math.floor((row + 0.5) * 1080 / height)\n    for (let col = 0; col < width; col++) {\n      const dx = (col + 0.5) / width - centerX\n      const u = (dx * cos + dy * sin / aspect) / radiusX\n      const v = (dy * cos - dx * sin * aspect) / radiusY\n      const distance = Math.hypot(u, v)\n      if (distance >= 1) continue\n\n      const offset = (row * width + col) * 4\n      const alpha = ease(limit((1 - distance) / feather))\n      let red = 0\n      let green = 0\n      let blue = 0\n      let t = 0\n      let light = 0\n\n      switch (layer.effect) {\n        case \"mesh\": {\n          const px = u + warp * Math.sin(v * 3.7 + phase) * 0.29\n          const py = v + warp * Math.sin(u * 4.8 - phase) * 0.29\n          let sum = 0\n          for (let index = 0; index < colors.length; index++) {\n            const cx = px - meshPoints[index].x\n            const cy = py - meshPoints[index].y\n            const influence = Math.exp(-(cx * cx + cy * cy) * meshFalloff)\n            sum += influence\n            red += colors[index][0] * influence\n            green += colors[index][1] * influence\n            blue += colors[index][2] * influence\n          }\n          red /= sum\n          green /= sum\n          blue /= sum\n          break\n        }\n        case \"radial\":\n          t = distance * (1.08 + 0.45 * warp)\n          break\n        case \"linear\":\n          t = 0.5 + u * (0.52 + 0.4 * warp)\n          break\n        case \"flow\": {\n          const bend = v + Math.sin(u * 3.2 + phase) * (0.19 + 0.58 * warp)\n          t = 0.5 + bend * 0.53 + Math.sin(u * 5.5 - bend * 4.4) * warp * 0.16\n          break\n        }\n        case \"silk\": {\n          const fold = v + Math.sin(u * 3.6 + phase) * (0.14 + warp * 0.34) + Math.sin(u * 7.1 + v * 3.6) * warp * 0.11\n          t = 0.5 + Math.sin(fold * (3.6 + warp * 3.1) + u * 1.36) * 0.40\n          const crease = Math.max(0, Math.cos(fold * 9.1 - u * 2.15 + phase))\n          light = Math.pow(crease, 8.5) * (20 + warp * 32) - 7\n          break\n        }\n        case \"conic\":\n          t = fract(Math.atan2(v, u) / tau + 0.5 + distance * warp * 0.44)\n          break\n        case \"reflected\":\n          t = Math.abs(v + Math.sin(u * 2.4 + phase) * warp * 0.32) * 1.3\n          break\n      }\n\n      if (layer.effect !== \"mesh\" && stops === 0) {\n        [red, green, blue] = colors[0]\n      } else if (layer.effect !== \"mesh\") {\n        const loop = layer.effect === \"conic\"\n        const stop = limit(t) * (loop ? colors.length : stops)\n        const index = Math.min(loop ? stops : stops - 1, Math.floor(stop))\n        const next = (index + 1) % colors.length\n        const f = stop - index\n        const mix = f + (ease(f) - f) * (0.25 + 0.65 * feather)\n        red = colors[index][0] + (colors[next][0] - colors[index][0]) * mix\n        green = colors[index][1] + (colors[next][1] - colors[index][1]) * mix\n        blue = colors[index][2] + (colors[next][2] - colors[index][2]) * mix\n      }\n\n      if (textured) {\n        const textureX = Math.floor((col + 0.5) * 1920 / width)\n        light += textureAt(layer.texture, u * radiusX * aspect, v * radiusY, textureX, textureY, scale, layer.seed) * strength\n      }\n\n      pixels[offset] = red + light\n      pixels[offset + 1] = green + light\n      pixels[offset + 2] = blue + light\n      pixels[offset + 3] = alpha * 255\n    }\n  }\n  ctx.putImageData(frame, 0, 0)\n}\n\nexport function drawGradient(canvas: HTMLCanvasElement, config: GradientConfig) {\n  const ctx = canvas.getContext(\"2d\")\n  if (!ctx) return\n\n  const width = canvas.width\n  const height = canvas.height\n  const previous = layerCache.get(canvas) ?? new Map<string, CacheEntry>()\n  const cache = new Map<string, CacheEntry>()\n\n  ctx.clearRect(0, 0, width, height)\n  ctx.fillStyle = config.base\n  ctx.fillRect(0, 0, width, height)\n\n  for (const layer of config.layers) {\n    if (!layer.visible || layer.opacity === 0 || layer.colors.length === 0) continue\n    const { id, name, opacity, blend, visible, ...paint } = layer\n    const key = JSON.stringify([width, height, paint])\n    let entry = previous.get(id)\n    if (entry?.key !== key) {\n      const surface = entry?.canvas ?? canvas.ownerDocument.createElement(\"canvas\")\n      if (surface.width !== width) surface.width = width\n      if (surface.height !== height) surface.height = height\n      rasterLayer(surface, layer)\n      entry = { key, canvas: surface }\n    }\n    cache.set(id, entry)\n    ctx.globalAlpha = opacity / 100\n    ctx.globalCompositeOperation = blend\n    ctx.drawImage(entry.canvas, 0, 0)\n  }\n\n  ctx.globalAlpha = 1\n  ctx.globalCompositeOperation = \"source-over\"\n  layerCache.set(canvas, cache)\n}\n\nexport const defaultGradient: GradientConfig = /* CONFIG */\n\nexport type GradientBackgroundProps = {\n  config?: GradientConfig\n  width?: number\n  height?: number\n  className?: string\n  style?: CSSProperties\n}\n\nexport default function GradientBackground({\n  config = defaultGradient,\n  width = 1920,\n  height = 1080,\n  className,\n  style,\n}: GradientBackgroundProps) {\n  const canvas = useRef<HTMLCanvasElement>(null)\n\n  useEffect(() => {\n    if (canvas.current) drawGradient(canvas.current, config)\n  }, [config, width, height])\n\n  return (\n    <canvas\n      ref={canvas}\n      width={width}\n      height={height}\n      className={className}\n      aria-hidden=\"true\"\n      style={{\n        display: \"block\",\n        width: \"100%\",\n        height: \"auto\",\n        backgroundColor: config.base,\n        ...style,\n      }}\n    />\n  )\n}\n"
+
+const effects = {
+  mesh: ["Mesh", "Multiple pools of color that blend into each other."],
+  radial: ["Radial glow", "Color radiates out from the center of the layer."],
+  linear: ["Linear", "Color runs in one direction across the layer."],
+  flow: ["Flow", "A bent gradient that sweeps across the canvas."],
+  silk: ["Silk", "Soft folds with thin bands of reflected light."],
+  conic: ["Conic", "Colors turn around a central pivot."],
+  reflected: ["Reflected", "A symmetrical band with color falling away on both sides."],
+}
+
+const textures = {
+  none: ["None", "A smooth finish."],
+  grain: ["Film grain", "Fine, irregular speckles like grain on photographic film."],
+  paper: ["Paper fiber", "A slightly directional, matte speckle."],
+  fluted: ["Fluted glass", "Thin ridges with alternating highlights and shadows."],
+  scanline: ["Scanlines", "Even horizontal lines with a soft edge."],
+  grid: ["Fine grid", "A repeating grid of delicate intersecting lines."],
+  dots: ["Halftone dots", "Small, evenly spaced dots."],
+  hatch: ["Crosshatch", "Two diagonal sets of lines that cross."],
+  moire: ["Moiré", "Two overlapping line patterns that form wider waves."],
+}
+
+const blends = {
+  "source-over": "Normal",
+  screen: "Screen",
+  multiply: "Multiply",
+  "soft-light": "Soft light",
+  overlay: "Overlay",
+  lighter: "Add",
+}
+
+const swatches = [
+  ["#FFFFFF","#F5F2E9","#E8DFD8","#D2C5BF","#ABA8AE","#797B86","#454759","#161B29"],
+  ["#FFE1DC","#FFB5BA","#FF908C","#EF626C","#C83F65","#A6254C","#742734","#3C1B31"],
+  ["#FFF0C6","#FFDB9C","#FFC368","#FFA442","#FF762B","#DA502B","#A74732","#55241F"],
+  ["#FFFACE","#F4EEA2","#FFE34E","#FFD231","#D3B939","#9D892C","#ACA55F","#575628"],
+  ["#F3F8D8","#E1ECAF","#B9D88F","#9DC759","#75B045","#58975F","#3F735C","#254836"],
+  ["#E3F8E9","#BFEEDD","#8CDBCC","#51CFC0","#17B9AC","#1A929B","#247385","#144352"],
+  ["#E2F9FF","#BBECF1","#83D9E7","#37C4E4","#21A3D6","#007FBA","#106487","#123A5A"],
+  ["#EEF0FF","#CBDDFF","#A7C3F6","#7599F0","#4776EB","#2A55CA","#25468E","#17264E"],
+  ["#F0E9FF","#DBCEFB","#C2A9F7","#9F80EF","#815EE4","#6B3AC6","#4A2B8C","#291C53"],
+  ["#FFF0F7","#FAD1F0","#EFAEE5","#DF8FD7","#CC65B5","#AD4E9C","#783771","#482140"],
+]
+
+function colors(hex) {
+  return hex.split(" ").map(value => "#" + value.toUpperCase())
+}
+
+function makeLayer(id, name, effect, hex, options = {}) {
+  return {
+    id, name, effect, colors: typeof hex === "string" ? colors(hex) : hex,
+    texture: "none", blend: "source-over", x: 50, y: 50, width: 168,
+    height: 180, angle: 0, opacity: 100, softness: 68, warp: 30,
+    strength: 24, scale: 100, seed: 23, visible: true, ...options,
+  }
+}
+
+function preset(name, effect, base, hex, options = {}, accent) {
+  const main = makeLayer("field", effects[effect][0], effect, hex, {
+    width: 219, height: 225, softness: 62, ...options,
+  })
+  const layers = accent ? [main, makeLayer("light", ...accent)] : [main]
+  return { name, config: { base: "#" + base, layers } }
+}
+
+const presets = [
+  {
+    name: "Tidal Mist",
+    config: {
+      base: "#558DA1",
+      layers: [
+        makeLayer("field", "Ocean wash", "mesh", "e3f5ef 6ea7c1 275674 78b7ce b7e4e3", { width: 216, height: 204, angle: -18, warp: 67, seed: 8, texture: "grain", strength: 19 }),
+        makeLayer("fold", "Silk current", "silk", "376994 65a1b8 abbfcf cbeeea f0fff2", { x: 51, y: 49, width: 187, height: 200, angle: -32, opacity: 75, softness: 94, warp: 37, seed: 45, texture: "grain", strength: 20 }),
+        makeLayer("light", "Seafoam light", "radial", "f2fff2 bde9e1 7dc2c9", { x: 76, y: 29, width: 84, height: 139, opacity: 55, softness: 91, warp: 4, texture: "grain", strength: 16, blend: "screen" }),
+      ],
+    },
+  },
+  preset("Peach Bloom", "mesh", "d786bb", "eeabd8 f2b4a6 ffe7ba f7c2c0 bb80c1", { angle: 22, seed: 43, warp: 42, texture: "grain", strength: 10 },
+    ["Apricot light", "radial", "fff4dc ffce9d e89acd", { x: 78, y: 35, width: 107, height: 161, opacity: 53, softness: 95, blend: "screen" }]),
+  preset("Matcha Glass", "mesh", "89a96b", "d6e9ab acce81 7d9e66 e1ecae", { angle: 0, seed: 59, texture: "fluted", strength: 42, scale: 86 }),
+  preset("Blue Hour", "flow", "254a92", "152961 2952a2 4c85de a6c4f6 e4e6ff", { angle: -28, warp: 72, texture: "grain", strength: 16 },
+    ["Blue flare", "radial", "e6f4ff 79b0fb 436cdb", { x: 45, y: 12, width: 105, height: 105, opacity: 62, softness: 100, blend: "screen" }]),
+  preset("Lilac Silk", "silk", "4e47a8", "332567 5544a9 8d6edc c1a8f1 f0dfff", { angle: 18, warp: 60, seed: 42, texture: "grain", strength: 16 }),
+  preset("Mango Light", "mesh", "f8ad48", "ffe9a2 ffe377 ffc646 ffa050 ff956b", { angle: 54, warp: 72, seed: 96, texture: "paper", strength: 27 }),
+  preset("Rice Paper", "radial", "f3f1ea", "ebc5cd f7dfd5 f4f1e8 f3f1ea", { width: 118, height: 143, x: 49, y: 49, softness: 100, texture: "paper", strength: 12 }),
+  preset("Citrus Tide", "silk", "287dc7", "0754bb 35a0cf 59c6ac 98d749 d8ef70", { angle: 38, warp: 50, texture: "grain", strength: 19 }),
+  preset("Sage Canopy", "mesh", "8eaa84", "7aaa86 8cbfa9 abc3a9 a4c778 c4d694", { angle: -9, warp: 85, texture: "paper", strength: 13 }),
+  preset("Sherbet", "flow", "ae6fbe", "4c64ba 8575d9 f29bca ffaec1 ffd0ba", { angle: -17, warp: 54, seed: 39, texture: "grain", strength: 19 }),
+  preset("Violet Dusk", "conic", "2d2c65", "302469 594ac2 7a81f0 a06aff 37217a 171646", { x: 45, y: 76, warp: 38, texture: "grain", strength: 19 }),
+  preset("Copper Sky", "flow", "193d82", "153b82 3e69ba 806f95 d9794c ff7d28", { x: 51, y: 53, angle: -38, warp: 40, texture: "grain", strength: 25 }),
+  preset("Arctic Bloom", "silk", "1a77a8", "0d4b9c 276bc2 35bed9 bbf5f0 f1fffe", { angle: 38, warp: 35, texture: "grain", strength: 13 }),
+  preset("Prism", "conic", "522a7c", "e992dc ffe8b1 cde585 6bcfe7 4d62d1 9b56c7", { x: 67, y: 26, warp: 55, texture: "moire", strength: 18, scale: 94 }),
+  preset("Iris Frost", "reflected", "aec2f0", "fff5ff cfccf5 a9bcea 75b6ea 81d4fc", { angle: 29, y: 82, warp: 47, texture: "paper", strength: 10 }),
+  preset("Mulberry", "mesh", "361f48", "321c52 6a3275 c7719d dca6c0 e0a7aa", { angle: 61, seed: 60, texture: "hatch", strength: 20, scale: 103 }),
+  preset("Mint Screen", "linear", "75aa98", "2c7c82 68b5a7 c6ead2 e9efaf", { angle: -28, texture: "scanline", strength: 21, scale: 90 }),
+  preset("Solar Print", "reflected", "f3a353", "ffeaa3 f8be61 ff8d65 da5a73 704675", { angle: -23, x: 25, y: 45, warp: 29, texture: "dots", strength: 40, scale: 75 }),
+]
+
+
+const $ = selector => document.querySelector(selector)
+const $$ = selector => [...document.querySelectorAll(selector)]
+const copy = value => JSON.parse(JSON.stringify(value))
+const clamp = (value, min, max) => Math.min(max, Math.max(min, value))
+const storageKey = "gradient-studio-v1"
+const maxLayers = 16
+const maxColors = 16
+
+const iconPaths = {
+  undo: '<path d="M9 6 4 11l5 5M4 11h10a5 5 0 0 1 0 10"/>',
+  redo: '<path d="m15 6 5 5-5 5m5-5H10a5 5 0 0 0 0 10"/>',
+  tweak: '<path d="M4 6h5m4 0h7M4 12h10m4 0h2M4 18h2m4 0h10M9 3.5v5M14 9.5v5M6 15.5v5"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>',
+  left: '<path d="m14 6-6 6 6 6"/>',
+  right: '<path d="m10 6 6 6-6 6"/>',
+  up: '<path d="m6 12 6-6 6 6m-6-6v13"/>',
+  down: '<path d="m6 12 6 6 6-6m-6 6V5"/>',
+  trash: '<path d="M4 7h16m-11 0V4h6v3m-9 0 1 13h10l1-13m-8 4v5m4-5v5"/>',
+  duplicate: '<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/>',
+  visible: '<path d="M2.7 12s3.2-5.3 9.3-5.3 9.3 5.3 9.3 5.3-3.2 5.3-9.3 5.3S2.7 12 2.7 12Z"/><circle cx="12" cy="12" r="2.4"/>',
+  hidden: '<path d="m4 4 16 16M2.7 12s1.1-1.8 3.2-3.3m3.1-1.6c.9-.3 1.9-.4 3-.4 6.1 0 9.3 5.3 9.3 5.3s-1 1.6-2.9 3.1m-3.5 1.8c-.9.3-1.9.4-2.9.4-6.1 0-9.3-5.3-9.3-5.3"/>',
+  download: '<path d="M12 3v12m-4-4 4 4 4-4M5 16v4h14v-4"/>',
+  code: '<path d="m8 7-5 5 5 5m8-10 5 5-5 5M14 5l-4 14"/>',
+  close: '<path d="m6 6 12 12M18 6 6 18"/>',
+  cross: '<path d="M12 5v14M5 12h14"/>',
+  resize: '<path d="m5 5 14 14m-7 0h7v-7"/>',
+  swatches: '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
+  effect: '<path d="M2 9c4-7 6 7 10 0s6-7 10 0M2 16c4-7 6 7 10 0s6-7 10 0"/>',
+  texture: '<path d="M5 6h.01M12 6h.01M19 6h.01M5 12h.01M12 12h.01M19 12h.01M5 18h.01M12 18h.01M19 18h.01" stroke-width="2.8"/>',
+  chevron: '<path d="m6 9 6 6 6-6"/>',
+}
+function icon(name) {
+  return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + iconPaths[name] + '</svg>'
+}
+
+const preview = $("#preview")
+const artboard = $("#artboard")
+const controls = $("#canvas-controls")
+const resizeGuide = $("#resize-guide")
+const canvasHint = $("#canvas-hint")
+const canvasPins = new Map()
+const pointers = new Map()
+const presetStrip = $("#preset-strip")
+const dialog = $("#presets-dialog")
+const draft = document.createElement("canvas")
+draft.width = 640
+draft.height = 360
+
+const undoStack = []
+const redoStack = []
+let config = copy(presets[0].config)
+let activePreset = 0
+let selectedId = config.layers.at(-1).id
+let selectedColor = 0
+let showingCode = false
+let showHandles = true
+let pendingEdit = null
+let pendingFrame = 0
+let paintTimer = 0
+let toastTimer = 0
+let canvasGesture = null
+let draggedId = null
+
+try {
+  const saved = JSON.parse(localStorage.getItem(storageKey))
+  if (saved?.config?.layers && /^#[0-9a-f]{6}$/i.test(saved.config.base)) restore(saved)
+} catch {}
+
+function selectedLayer() {
+  return config.layers.find(layer => layer.id === selectedId)
+}
+
+function snapshot() {
+  return JSON.stringify({ config, activePreset, selectedId, selectedColor })
+}
+
+function restore(state) {
+  config = state.config
+  activePreset = presets[state.activePreset] ? state.activePreset : 0
+  selectedId = state.selectedId
+  selectedColor = state.selectedColor || 0
+}
+
+function persist() {
+  try { localStorage.setItem(storageKey, snapshot()) } catch {}
+}
+
+function record(before) {
+  if (before !== snapshot()) {
+    undoStack.push(before)
+    if (undoStack.length > 50) undoStack.shift()
+    redoStack.length = 0
+    persist()
+  }
+  syncHistory()
+}
+
+function startEdit(control) {
+  if (pendingEdit?.control === control) return
+  finishEdit()
+  pendingEdit = { control, before: snapshot() }
+}
+
+function finishEdit() {
+  if (!pendingEdit) return
+  record(pendingEdit.before)
+  pendingEdit = null
+}
+
+function change(edit) {
+  endCanvasGesture()
+  finishEdit()
+  const before = snapshot()
+  edit()
+  record(before)
+  syncEditor()
+  paint()
+}
+
+function navigateHistory(from, to) {
+  endCanvasGesture()
+  finishEdit()
+  const prior = from.pop()
+  if (!prior) return
+  to.push(snapshot())
+  restore(JSON.parse(prior))
+  persist()
+  syncEditor()
+  paint()
+}
+
+function paint(interactive = false) {
+  cancelAnimationFrame(pendingFrame)
+  clearTimeout(paintTimer)
+  if (showingCode) {
+    $("#source-view").textContent = reactSource()
+    return
+  }
+  pendingFrame = requestAnimationFrame(() => {
+    if (interactive) {
+      drawGradient(draft, config)
+      const ctx = preview.getContext("2d")
+      ctx.clearRect(0, 0, preview.width, preview.height)
+      ctx.drawImage(draft, 0, 0, preview.width, preview.height)
+      paintTimer = setTimeout(() => drawGradient(preview, config), 160)
+    } else {
+      drawGradient(preview, config)
+    }
+  })
+}
+
+function syncHistory() {
+  $('[data-action="undo"]').disabled = undoStack.length === 0
+  $('[data-action="redo"]').disabled = redoStack.length === 0
+}
+
+function syncTitle() {
+  const preset = presets[activePreset]
+  const changed = JSON.stringify(config) !== JSON.stringify(preset.config)
+  $("#art-name").textContent = preset.name + (changed ? " · Edited" : "")
+}
+
+function renderLayers() {
+  const list = $("#layer-list")
+  list.replaceChildren()
+  const layers = [...config.layers].reverse()
+
+  for (const layer of layers) {
+    const row = document.createElement("div")
+    row.className = "layer-row" + (layer.visible ? "" : " is-hidden")
+    row.dataset.layer = layer.id
+    const button = document.createElement("button")
+    button.type = "button"
+    button.className = "layer-select"
+    button.dataset.action = "select-layer"
+    button.draggable = true
+    button.setAttribute("aria-pressed", String(layer.id === selectedId))
+    button.innerHTML = '<span class="layer-chip"></span><span class="layer-name"></span>'
+    button.querySelector(".layer-chip").style.background = "linear-gradient(125deg," + layer.colors.join(",") + ")"
+    button.querySelector(".layer-name").textContent = layer.name
+    button.title = effects[layer.effect][0]
+
+    const visibility = document.createElement("button")
+    visibility.type = "button"
+    visibility.className = "icon-button"
+    visibility.dataset.action = "visibility"
+    visibility.title = (layer.visible ? "Hide " : "Show ") + layer.name
+    visibility.setAttribute("aria-label", visibility.title)
+    visibility.innerHTML = icon(layer.visible ? "visible" : "hidden")
+    row.append(button, visibility)
+    list.append(row)
+  }
+
+  const index = config.layers.findIndex(layer => layer.id === selectedId)
+  $("#layer-count").textContent = layers.length
+  $('[data-action="add-layer"]').disabled = layers.length >= maxLayers
+  $('[data-action="raise"]').disabled = index < 0 || index === layers.length - 1
+  $('[data-action="lower"]').disabled = index <= 0
+  $('[data-action="duplicate"]').disabled = index < 0 || layers.length >= maxLayers
+  $('[data-action="delete"]').disabled = index < 0
+}
+
+function syncColors(rebuild = true, exclude = null) {
+  const layer = selectedLayer()
+  const chips = $("#layer-colors")
+  if (!layer) return
+  selectedColor = clamp(selectedColor, 0, layer.colors.length - 1)
+
+  if (rebuild) {
+    chips.replaceChildren()
+    layer.colors.forEach((color, index) => {
+      const button = document.createElement("button")
+      button.type = "button"
+      button.className = "color-chip"
+      button.dataset.action = "select-color"
+      button.dataset.colorIndex = index
+      chips.append(button)
+    })
+    const add = document.createElement("button")
+    add.type = "button"
+    add.className = "color-chip add"
+    add.dataset.action = "add-color"
+    add.setAttribute("aria-label", "Add color")
+    add.title = "Add color"
+    add.innerHTML = icon("plus")
+    chips.append(add)
+  }
+
+  chips.querySelectorAll("[data-color-index]").forEach((button, index) => {
+    const color = layer.colors[index]
+    button.style.setProperty("--swatch", color)
+    button.setAttribute("aria-pressed", String(index === selectedColor))
+    button.setAttribute("aria-label", "Color " + (index + 1) + " " + color)
+    button.title = color
+  })
+  $('[data-action="add-color"]').disabled = layer.colors.length >= maxColors
+  $('[data-action="color-left"]').disabled = selectedColor === 0
+  $('[data-action="color-right"]').disabled = selectedColor >= layer.colors.length - 1
+  $('[data-action="remove-color"]').disabled = layer.colors.length <= 2
+  if (exclude !== $("#active-color")) $("#active-color").value = layer.colors[selectedColor]
+  if (exclude !== $("#active-hex")) {
+    $("#active-hex").value = layer.colors[selectedColor]
+    $("#active-hex").removeAttribute("aria-invalid")
+  }
+}
+
+function syncNumbers(exclude = null) {
+  const layer = selectedLayer()
+  if (!layer) return
+  for (const input of $$("input[data-prop]")) {
+    if (input !== exclude) input.value = layer[input.dataset.prop]
+    if (input.type === "range") {
+      const fraction = (Number(input.value) - Number(input.min)) / (Number(input.max) - Number(input.min))
+      input.style.setProperty("--fill", (fraction * 100) + "%")
+    }
+  }
+}
+
+function syncEditor() {
+  const layer = selectedLayer()
+  $("#layer-settings").hidden = !layer
+  $("#base-color").value = config.base
+  renderLayers()
+  syncColors()
+  syncNumbers()
+  if (layer) {
+    $("#effect").value = layer.effect
+    $("#effect").title = effects[layer.effect][1]
+    $("#texture").value = layer.texture
+    $("#blend").value = layer.blend
+    $("#texture").title = textures[layer.texture][1]
+    $("#texture-fields").hidden = layer.texture === "none"
+  }
+  $$(".preset-card").forEach(button => button.setAttribute("aria-pressed", String(Number(button.dataset.preset) === activePreset)))
+  syncTitle()
+  syncCanvasControls()
+  syncHistory()
+}
+
+function addSliders(destination, specs) {
+  const container = $(destination)
+  for (const [prop, label, min, max] of specs) {
+    const row = document.createElement("div")
+    row.className = "slider-row"
+    row.innerHTML = '<label for="' + prop + '-slider">' + label + '</label>'
+      + '<input type="range" id="' + prop + '-slider" data-prop="' + prop + '" min="' + min + '" max="' + max + '">'
+      + '<input class="numeric" type="number" aria-label="' + label + ' value" data-prop="' + prop + '" min="' + min + '" max="' + max + '" step="1">'
+    container.append(row)
+  }
+}
+
+function fillOptions(selector, options) {
+  for (const [value, entry] of Object.entries(options)) {
+    $(selector).add(new Option(Array.isArray(entry) ? entry[0] : entry, value))
+  }
+}
+
+function renderPresets() {
+  const thumbs = presets.map(preset => {
+    const thumb = document.createElement("canvas")
+    thumb.width = 192
+    thumb.height = 108
+    drawGradient(thumb, preset.config)
+    return thumb.toDataURL("image/png")
+  })
+  for (const container of [presetStrip, $("#preset-grid")]) {
+    presets.forEach((preset, index) => {
+      const button = document.createElement("button")
+      button.type = "button"
+      button.className = "preset-card"
+      button.dataset.action = "preset"
+      button.dataset.preset = index
+      const image = document.createElement("img")
+      image.className = "preset-thumb"
+      image.src = thumbs[index]
+      image.alt = ""
+      const label = document.createElement("span")
+      label.className = "preset-name"
+      label.textContent = preset.name
+      button.append(image, label)
+      container.append(button)
+    })
+  }
+  $("#preset-count").textContent = presets.length
+  $("#dialog-count").textContent = presets.length
+}
+
+function renderSwatches() {
+  for (const value of swatches.flat()) {
+    const button = document.createElement("button")
+    button.type = "button"
+    button.style.setProperty("--swatch", value)
+    button.dataset.action = "swatch"
+    button.dataset.hex = value
+    button.setAttribute("aria-label", "Use " + value)
+    button.title = value
+    $("#swatch-library").append(button)
+  }
+}
+
+function updateCarousel() {
+  $('[data-action="presets-prev"]').disabled = presetStrip.scrollLeft < 2
+  $('[data-action="presets-next"]').disabled = presetStrip.scrollLeft + presetStrip.clientWidth >= presetStrip.scrollWidth - 2
+}
+
+function changeLayerOrder(id, offset) {
+  const index = config.layers.findIndex(layer => layer.id === id)
+  const target = clamp(index + offset, 0, config.layers.length - 1)
+  if (index < 0 || target === index) return
+  change(() => {
+    const [layer] = config.layers.splice(index, 1)
+    config.layers.splice(target, 0, layer)
+    selectedId = id
+  })
+}
+
+function chooseLayer(id) {
+  endCanvasGesture()
+  finishEdit()
+  selectedId = id
+  selectedColor = 0
+  syncEditor()
+  persist()
+}
+
+function choosePreset(index) {
+  change(() => {
+    config = copy(presets[index].config)
+    activePreset = index
+    selectedId = config.layers.at(-1)?.id
+    selectedColor = 0
+  })
+  if (dialog.open) dialog.close()
+}
+
+function newId() {
+  return "layer-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8)
+}
+
+function newLayer() {
+  const current = selectedLayer()
+  const palette = current?.colors.slice() || colors("f0efe5 94cfcc 597eb4")
+  const layer = makeLayer(newId(), "Gradient " + (config.layers.length + 1), "mesh", palette, {
+    width: 106, height: 127, opacity: 84, texture: "grain", strength: 16,
+  })
+  change(() => {
+    config.layers.push(layer)
+    selectedId = layer.id
+    selectedColor = 0
+  })
+}
+
+function changeColorOrder(layer, offset) {
+  change(() => {
+    const next = selectedColor + offset
+    const [color] = layer.colors.splice(selectedColor, 1)
+    layer.colors.splice(next, 0, color)
+    selectedColor = next
+  })
+}
+
+function updateInteractive(control) {
+  const layer = selectedLayer()
+  if (control.id === "base-color") {
+    startEdit(control)
+    config.base = control.value.toUpperCase()
+  } else if (control.id === "active-color" && layer) {
+    startEdit(control)
+    layer.colors[selectedColor] = control.value.toUpperCase()
+    syncColors(false, control)
+  } else if (control.dataset.prop && layer && control.value !== "") {
+    const { prop } = control.dataset
+    const value = Number(control.value)
+    if (!Number.isFinite(value) || value < Number(control.min) || value > Number(control.max)) return
+    startEdit(control)
+    layer[prop] = value
+    syncNumbers(control)
+    syncCanvasControls()
+  } else {
+    return
+  }
+  syncTitle()
+  paint(true)
+}
+
+function validHex(value) {
+  const hex = value.trim().replace(/^#/, "")
+  if (/^[\da-f]{3}$/i.test(hex)) return "#" + [...hex].map(char => char + char).join("").toUpperCase()
+  if (/^[\da-f]{6}$/i.test(hex)) return "#" + hex.toUpperCase()
+  return null
+}
+
+function setView(code) {
+  endCanvasGesture()
+  showingCode = code
+  $("#preview-tab").setAttribute("aria-selected", String(!code))
+  $("#code-tab").setAttribute("aria-selected", String(code))
+  $("#preview-tab").tabIndex = code ? -1 : 0
+  $("#code-tab").tabIndex = code ? 0 : -1
+  $("#preview-pane").hidden = code
+  $("#code-pane").hidden = !code
+  $("#toggle-handles").hidden = code
+  syncCanvasControls()
+  paint()
+}
+
+function reactSource() {
+  return reactTemplate.replace("/* CONFIG */", () => JSON.stringify(config, null, 2))
+}
+
+function saveBlob(blob, filename) {
+  const url = URL.createObjectURL(blob)
+  const anchor = document.createElement("a")
+  anchor.href = url
+  anchor.download = filename
+  document.body.append(anchor)
+  anchor.click()
+  anchor.remove()
+  setTimeout(() => URL.revokeObjectURL(url), 30000)
+}
+
+function message(text) {
+  const toast = $("#toast")
+  clearTimeout(toastTimer)
+  toast.textContent = text
+  toast.classList.add("is-visible")
+  toastTimer = setTimeout(() => toast.classList.remove("is-visible"), 2400)
+}
+
+async function downloadPng(button) {
+  button.disabled = true
+  const label = button.lastChild
+  label.textContent = " Rendering…"
+  const exportConfig = copy(config)
+  const filename = presets[activePreset].name.toLowerCase().replaceAll(" ", "-") + "-1920x1080.png"
+  try {
+    // Allow the button's busy state to paint before rendering the full-size canvas.
+    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))
+    const full = document.createElement("canvas")
+    full.width = 1920
+    full.height = 1080
+    drawGradient(full, exportConfig)
+    const blob = await new Promise(resolve => full.toBlob(resolve, "image/png"))
+    if (!blob) throw new Error("PNG encoding failed")
+    saveBlob(blob, filename)
+    message("PNG ready · 1920 × 1080")
+  } catch {
+    message("Couldn’t export PNG. Please try again.")
+  } finally {
+    label.textContent = " Download PNG"
+    button.disabled = false
+  }
+}
+
+async function copySource() {
+  try {
+    await navigator.clipboard.writeText(reactSource())
+    message("React code copied")
+  } catch {
+    const input = document.createElement("textarea")
+    input.value = reactSource()
+    input.style.cssText = "position:fixed;left:-1000px;top:0"
+    document.body.append(input)
+    const priorFocus = document.activeElement
+    input.select()
+    try {
+      if (!document.execCommand("copy")) throw new Error("Clipboard unavailable")
+      message("React code copied")
+    } catch {
+      window.getSelection()?.selectAllChildren($("#source-view"))
+      message("Code selected. Press Ctrl+C or ⌘C to copy.")
+    } finally {
+      input.remove()
+      priorFocus?.focus({ preventScroll: true })
+    }
+  }
+}
+
+const actions = {
+  undo: () => navigateHistory(undoStack, redoStack),
+  redo: () => navigateHistory(redoStack, undoStack),
+  reset: () => choosePreset(activePreset),
+  preset: button => choosePreset(Number(button.dataset.preset)),
+  "all-presets": () => dialog.showModal(),
+  "close-presets": () => dialog.close(),
+  "presets-prev": () => presetStrip.scrollBy({ left: -presetStrip.clientWidth, behavior: "smooth" }),
+  "presets-next": () => presetStrip.scrollBy({ left: presetStrip.clientWidth, behavior: "smooth" }),
+  "select-layer": button => {
+    const id = button.closest(".layer-row").dataset.layer
+    chooseLayer(id)
+    $$(".layer-row").find(row => row.dataset.layer === id)?.querySelector(".layer-select").focus()
+  },
+  visibility: button => {
+    const id = button.closest(".layer-row").dataset.layer
+    change(() => {
+      const layer = config.layers.find(item => item.id === id)
+      layer.visible = !layer.visible
+    })
+    $$(".layer-row").find(row => row.dataset.layer === id)?.querySelector('[data-action="visibility"]').focus()
+  },
+  "add-layer": newLayer,
+  raise: () => changeLayerOrder(selectedId, 1),
+  lower: () => changeLayerOrder(selectedId, -1),
+  duplicate: () => change(() => {
+    const original = selectedLayer()
+    const layer = { ...copy(original), id: newId(), name: original.name + " copy" }
+    config.layers.splice(config.layers.indexOf(original) + 1, 0, layer)
+    selectedId = layer.id
+  }),
+  delete: () => change(() => {
+    const index = config.layers.indexOf(selectedLayer())
+    config.layers.splice(index, 1)
+    selectedId = config.layers[Math.min(index, config.layers.length - 1)]?.id
+    selectedColor = 0
+  }),
+  "select-color": button => {
+    finishEdit()
+    selectedColor = Number(button.dataset.colorIndex)
+    syncColors(false)
+  },
+  "add-color": () => change(() => {
+    const layer = selectedLayer()
+    layer.colors.splice(selectedColor + 1, 0, "#FFFFFF")
+    selectedColor++
+  }),
+  "color-left": () => changeColorOrder(selectedLayer(), -1),
+  "color-right": () => changeColorOrder(selectedLayer(), 1),
+  "remove-color": () => change(() => selectedLayer().colors.splice(selectedColor, 1)),
+  swatches: button => {
+    const library = $("#swatch-library")
+    library.hidden = !library.hidden
+    button.setAttribute("aria-expanded", String(!library.hidden))
+  },
+  swatch: button => change(() => { selectedLayer().colors[selectedColor] = button.dataset.hex }),
+  png: downloadPng,
+  react: () => {
+    saveBlob(new Blob([reactSource()], { type: "text/plain;charset=utf-8" }), "GradientBackground.tsx")
+    message("React component ready · TSX")
+  },
+  copy: copySource,
+}
+
+document.addEventListener("click", event => {
+  const button = event.target.closest("button[data-action]")
+  if (button && !button.disabled) actions[button.dataset.action]?.(button)
+})
+
+document.addEventListener("input", event => {
+  if (event.target instanceof HTMLInputElement) updateInteractive(event.target)
+})
+
+document.addEventListener("change", event => {
+  const control = event.target
+  const layer = selectedLayer()
+  if (control instanceof HTMLSelectElement && control.dataset.prop && layer) {
+    change(() => {
+      layer[control.dataset.prop] = control.value
+    })
+    return
+  }
+  if (control.id === "active-hex" && layer) {
+    const hex = validHex(control.value)
+    if (hex) change(() => { layer.colors[selectedColor] = hex })
+    else control.setAttribute("aria-invalid", "true")
+    return
+  }
+  if (control.type === "number" && layer && control.dataset.prop) {
+    startEdit(control)
+    const value = control.valueAsNumber
+    if (Number.isFinite(value)) layer[control.dataset.prop] = clamp(Math.round(value), Number(control.min), Number(control.max))
+    syncNumbers()
+    syncCanvasControls()
+  }
+  if (pendingEdit?.control === control) {
+    finishEdit()
+    renderLayers()
+    syncTitle()
+    paint()
+  }
+})
+
+document.addEventListener("keydown", event => {
+  const control = event.target
+  if (event.key === "Enter" && control instanceof HTMLInputElement && (control.type === "number" || control.id === "active-hex")) control.blur()
+  const isTyping = control instanceof HTMLInputElement && ["text", "number"].includes(control.type)
+  if (isTyping || !(event.metaKey || event.ctrlKey)) return
+  if (event.key.toLowerCase() === "z") {
+    event.preventDefault()
+    if (event.shiftKey) actions.redo()
+    else actions.undo()
+  } else if (event.key.toLowerCase() === "y") {
+    event.preventDefault()
+    actions.redo()
+  }
+})
+
+$("#preview-tab").addEventListener("click", () => setView(false))
+$("#code-tab").addEventListener("click", () => setView(true))
+$(".segmented").addEventListener("keydown", event => {
+  if (!["ArrowRight", "ArrowLeft", "Home", "End"].includes(event.key)) return
+  event.preventDefault()
+  setView(event.key === "End" || (event.key !== "Home" && !showingCode))
+  $(showingCode ? "#code-tab" : "#preview-tab").focus()
+})
+$("#toggle-handles").addEventListener("click", event => {
+  endCanvasGesture()
+  showHandles = !showHandles
+  event.currentTarget.setAttribute("aria-pressed", String(showHandles))
+  syncCanvasControls()
+})
+
+function addCanvasPin(id) {
+  const pin = document.createElement("div")
+  pin.className = "layer-pin"
+  pin.dataset.layer = id
+  pin.innerHTML = '<span class="pin-leader" aria-hidden="true"></span>'
+    + '<button class="position-handle" data-canvas-action="move" type="button">' + icon("cross") + '</button>'
+    + '<button class="resize-handle" data-canvas-action="resize" type="button" hidden>' + icon("resize") + '</button>'
+  controls.append(pin)
+  const entry = { pin, leader: pin.firstElementChild, move: pin.children[1], resize: pin.children[2], x: 0, y: 0 }
+  canvasPins.set(id, entry)
+  return entry
+}
+
+const pinSpacing = 39
+const pinOffsets = []
+for (let y = -4; y <= 4; y++) {
+  for (let x = -4; x <= 4; x++) pinOffsets.push([x, y])
+}
+pinOffsets.sort((a, b) => a[0] ** 2 + a[1] ** 2 - b[0] ** 2 - b[1] ** 2)
+
+function syncCanvasControls() {
+  const layers = config.layers.filter(layer => layer.visible).reverse()
+  controls.hidden = !showHandles
+  canvasHint.hidden = showingCode || !showHandles || layers.length === 0
+
+  for (const [id, entry] of canvasPins) {
+    if (!layers.some(layer => layer.id === id)) {
+      entry.pin.remove()
+      canvasPins.delete(id)
+    }
+  }
+
+  const { clientWidth: width, clientHeight: height } = artboard
+  if (!showHandles || width === 0 || height === 0) return
+
+  const drags = new Map([...pointers.values()].map(drag => [drag.layer.id, drag]))
+  const positioned = []
+  const inset = 19
+  const toX = x => clamp(x, inset, width - inset)
+  const toY = y => clamp(y, inset, height - inset)
+  // Markers keep their original grip offset while held so nearby layers cannot displace them.
+  layers.sort((a, b) => Number(drags.has(b.id)) - Number(drags.has(a.id)))
+
+  for (const layer of layers) {
+    const entry = canvasPins.get(layer.id) ?? addCanvasPin(layer.id)
+    const { pin, leader, move, resize } = entry
+    const drag = drags.get(layer.id)
+    const actualX = layer.x * width / 100
+    const actualY = layer.y * height / 100
+    const x = toX(actualX)
+    const y = toY(actualY)
+
+    let point = [x, y]
+    if (drag) {
+      point = [toX(x + drag.offsetX), toY(y + drag.offsetY)]
+    } else {
+      const free = pinOffsets.find(([dx, dy]) => positioned.every(other =>
+        Math.hypot(other.x - toX(x + dx * pinSpacing), other.y - toY(y + dy * pinSpacing)) >= pinSpacing - 2))
+      if (free) point = [toX(x + free[0] * pinSpacing), toY(y + free[1] * pinSpacing)]
+    }
+
+    const [px, py] = point
+    entry.x = px
+    entry.y = py
+    positioned.push(entry)
+    pin.style.left = px + "px"
+    pin.style.top = py + "px"
+    pin.classList.toggle("is-picked", layer.id === selectedId)
+    pin.classList.toggle("is-dragging", Boolean(drag))
+    const label = layer.name
+    const fill = "linear-gradient(135deg," + layer.colors.join(",") + ")"
+    move.style.setProperty("--layer-fill", fill)
+    move.setAttribute("aria-label", "Move " + label)
+    move.setAttribute("aria-pressed", String(layer.id === selectedId))
+    move.title = "Drag to move " + label
+    resize.setAttribute("aria-label", "Resize " + label)
+    resize.title = "Drag to resize " + label
+    resize.hidden = layer.id !== selectedId && drag?.mode !== "resize"
+
+    const gap = Math.hypot(x - px, y - py)
+    leader.hidden = gap < 9
+    leader.style.width = gap + "px"
+    leader.style.transform = "rotate(" + Math.atan2(y - py, x - px) + "rad)"
+  }
+
+  const gripDistance = 25
+  for (const entry of positioned) {
+    if (entry.resize.hidden) continue
+    const drag = drags.get(entry.pin.dataset.layer)
+    const corners = [[1, 1], [-1, 1], [1, -1], [-1, -1]]
+    const next = corners.find(([sx, sy]) => {
+      const x = entry.x + sx * gripDistance
+      const y = entry.y + sy * gripDistance
+      return x > 12 && y > 12 && x < width - 12 && y < height - 12
+        && positioned.every(other => other === entry || Math.hypot(other.x - x, other.y - y) > 29)
+    })
+    const [sx, sy] = drag?.mode === "resize" ? [drag.sx, drag.sy] : next ?? [
+      entry.x < width / 2 ? 1 : -1,
+      entry.y < height / 2 ? 1 : -1,
+    ]
+    entry.resize.dataset.sx = sx
+    entry.resize.dataset.sy = sy
+    entry.pin.style.setProperty("--corner-x", (sx * gripDistance) + "px")
+    entry.pin.style.setProperty("--corner-y", (sy * gripDistance) + "px")
+    entry.resize.style.setProperty("--flip-x", sx)
+    entry.resize.style.setProperty("--flip-y", sy)
+  }
+
+  const sizing = [...pointers.values()].find(drag => drag.mode === "resize" && drag.moved)?.layer
+  resizeGuide.hidden = !sizing
+  if (sizing) {
+    resizeGuide.style.left = sizing.x + "%"
+    resizeGuide.style.top = sizing.y + "%"
+    resizeGuide.style.width = sizing.width + "%"
+    resizeGuide.style.height = sizing.height + "%"
+    resizeGuide.style.rotate = sizing.angle + "deg"
+  }
+}
+
+function endCanvasGesture() {
+  if (!canvasGesture) return
+  const { before, changed } = canvasGesture
+  canvasGesture = null
+  const captured = [...pointers.entries()]
+  pointers.clear()
+  for (const [id, drag] of captured) {
+    if (drag.button.hasPointerCapture(id)) drag.button.releasePointerCapture(id)
+  }
+  if (changed) record(before)
+  else persist()
+  syncCanvasControls()
+  paint()
+}
+
+function layerForCanvasButton(button) {
+  const id = button?.closest(".layer-pin")?.dataset.layer
+  return config.layers.find(layer => layer.id === id && layer.visible)
+}
+
+controls.addEventListener("pointerdown", event => {
+  const button = event.target.closest("button[data-canvas-action]")
+  const layer = layerForCanvasButton(button)
+  if (!layer || event.button !== 0 || [...pointers.values()].some(drag => drag.layer === layer)) return
+  if (!canvasGesture) {
+    finishEdit()
+    canvasGesture = { before: snapshot(), changed: false }
+  }
+
+  const { clientWidth: width, clientHeight: height } = artboard
+  const pin = canvasPins.get(layer.id)
+  pointers.set(event.pointerId, {
+    button, layer, width, height, mode: button.dataset.canvasAction,
+    clientX: event.clientX, clientY: event.clientY,
+    x: layer.x, y: layer.y, startWidth: layer.width, startHeight: layer.height,
+    offsetX: pin.x - clamp(layer.x * width / 100, 19, width - 19),
+    offsetY: pin.y - clamp(layer.y * height / 100, 19, height - 19),
+    sx: Number(button.dataset.sx), sy: Number(button.dataset.sy), moved: false,
+  })
+  button.setPointerCapture(event.pointerId)
+  if (selectedId !== layer.id) {
+    selectedId = layer.id
+    selectedColor = 0
+    syncEditor()
+  } else {
+    syncCanvasControls()
+  }
+})
+
+controls.addEventListener("pointermove", event => {
+  const drag = pointers.get(event.pointerId)
+  if (!drag) return
+  const dx = event.clientX - drag.clientX
+  const dy = event.clientY - drag.clientY
+  if (!drag.moved && Math.hypot(dx, dy) < 3) return
+
+  const { layer, width, height } = drag
+  if (drag.mode === "resize") {
+    const dw = drag.sx * dx * 200 / width
+    const dh = drag.sy * dy * 200 / height
+    layer.width = clamp(Math.round(drag.startWidth + dw), 5, 360)
+    layer.height = clamp(Math.round(drag.startHeight + dh), 5, 360)
+  } else {
+    layer.x = clamp(Math.round(drag.x + dx * 100 / width), -100, 200)
+    layer.y = clamp(Math.round(drag.y + dy * 100 / height), -100, 200)
+  }
+  drag.moved = true
+  canvasGesture.changed = true
+  syncCanvasControls()
+  syncTitle()
+  paint(true)
+})
+
+for (const name of ["pointerup", "pointercancel", "lostpointercapture"]) {
+  controls.addEventListener(name, event => {
+    if (!pointers.delete(event.pointerId)) return
+    if (pointers.size === 0) endCanvasGesture()
+    else syncCanvasControls()
+  })
+}
+
+controls.addEventListener("click", event => {
+  if (event.detail !== 0) return
+  const layer = layerForCanvasButton(event.target.closest("button[data-canvas-action]"))
+  if (layer && layer.id !== selectedId) chooseLayer(layer.id)
+})
+
+controls.addEventListener("keydown", event => {
+  const delta = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[event.key]
+  const button = event.target.closest("button[data-canvas-action]")
+  const layer = layerForCanvasButton(button)
+  if (!delta || !layer) return
+  event.preventDefault()
+  const step = event.shiftKey ? 5 : 1
+  change(() => {
+    if (selectedId !== layer.id) {
+      selectedId = layer.id
+      selectedColor = 0
+    }
+    if (button.dataset.canvasAction === "resize") {
+      layer.width = clamp(layer.width + delta[0] * step, 5, 360)
+      layer.height = clamp(layer.height + delta[1] * step, 5, 360)
+    } else {
+      layer.x = clamp(layer.x + delta[0] * step, -100, 200)
+      layer.y = clamp(layer.y + delta[1] * step, -100, 200)
+    }
+  })
+})
+
+$("#layer-list").addEventListener("dragstart", event => {
+  const row = event.target.closest(".layer-row")
+  if (!row) return
+  draggedId = row.dataset.layer
+  event.dataTransfer.setData("text/plain", draggedId)
+  event.dataTransfer.effectAllowed = "move"
+})
+$("#layer-list").addEventListener("dragover", event => {
+  if (!draggedId) return
+  event.preventDefault()
+  const row = event.target.closest(".layer-row")
+  $$(".layer-row").forEach(item => item.classList.toggle("drag-target", item === row && item.dataset.layer !== draggedId))
+})
+$("#layer-list").addEventListener("drop", event => {
+  if (!draggedId) return
+  event.preventDefault()
+  const row = event.target.closest(".layer-row")
+  if (row) {
+    const current = config.layers.findIndex(layer => layer.id === draggedId)
+    const target = config.layers.findIndex(layer => layer.id === row.dataset.layer)
+    const id = draggedId
+    draggedId = null
+    changeLayerOrder(id, target - current)
+  }
+})
+$("#layer-list").addEventListener("dragend", () => {
+  draggedId = null
+  $$(".drag-target").forEach(row => row.classList.remove("drag-target"))
+})
+
+presetStrip.addEventListener("scroll", updateCarousel, { passive: true })
+window.addEventListener("resize", updateCarousel)
+new ResizeObserver(syncCanvasControls).observe(artboard)
+dialog.addEventListener("click", event => { if (event.target === dialog) dialog.close() })
+
+const actionIcons = {
+  undo: "undo", redo: "redo", "add-layer": "plus", "presets-prev": "left", "presets-next": "right",
+  raise: "up", lower: "down", duplicate: "duplicate", delete: "trash", "color-left": "left",
+  "color-right": "right", "remove-color": "trash", swatches: "swatches", png: "download", react: "code", "close-presets": "close",
+}
+for (const [action, glyph] of Object.entries(actionIcons)) {
+  $('[data-action="' + action + '"]').insertAdjacentHTML("afterbegin", icon(glyph))
+}
+$("#tweak-icon").innerHTML = icon("tweak")
+$("#effect-icon").insertAdjacentHTML("afterbegin", icon("effect"))
+$("#texture-icon").insertAdjacentHTML("afterbegin", icon("texture"))
+$("#details-icon").innerHTML = icon("chevron")
+fillOptions("#effect", effects)
+fillOptions("#texture", textures)
+fillOptions("#blend", blends)
+addSliders("#texture-fields", [["strength","Strength",0,100],["scale","Texture size",25,300]])
+addSliders("#effect-fields", [["softness","Softness",0,100],["warp","Warp",0,100]])
+addSliders("#transform-fields", [["angle","Angle",-180,180],["opacity","Opacity",0,100]])
+renderPresets()
+renderSwatches()
+syncEditor()
+setView(false)
+updateCarousel()
+</script>
+</body>
+</html>

@@ -128,6 +128,25 @@
   background: rgba(17, 25, 40, .42);
   backdrop-filter: blur(4px);
 }
+.lab-dialog--studio {
+  width: min(1180px, calc(100% - 28px));
+  height: min(860px, calc(100dvh - 28px));
+  padding: 0;
+  overflow: hidden;
+  background: var(--side);
+}
+.lab-studio-frame {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+.lab-studio-close {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  z-index: 1;
+}
 html.lab-dialog-open { overflow: hidden; }
 
 .lab-dialog-grid {
@@ -327,80 +346,6 @@ html.lab-dialog-open { overflow: hidden; }
   display: flex;
   flex: 1;
 }
-.lab-preview-panel--gradient { flex-direction: column; gap: 9px; }
-.lab-gradient-presets { min-width: 0; }
-.lab-gradient-presets-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  margin: 0 4px 3px;
-}
-.lab-gradient-presets-bar h3 { margin: 0; font-size: 12px; }
-.lab-gradient-presets-bar .lab-compact { font-size: 11.5px; }
-.lab-gradient-preset-list {
-  display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: max(100px, calc((100% - 32px) / 5));
-  gap: 8px;
-  padding: 4px;
-  overflow: auto hidden;
-  scrollbar-width: thin;
-}
-.lab-gradient-preset-list.expanded {
-  grid-auto-flow: row;
-  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-  max-height: min(230px, 34dvh);
-  overflow: auto;
-}
-.lab-gradient-preset {
-  display: grid;
-  align-content: start;
-  gap: 5px;
-  min-width: 0;
-  padding: 4px;
-  border: 1px solid transparent;
-  border-radius: 9px;
-  background: transparent;
-  color: var(--ink-2);
-  font: inherit;
-  font-size: 11px;
-  text-align: left;
-  cursor: pointer;
-}
-.lab-gradient-preset:hover,
-.lab-gradient-preset[aria-pressed="true"] { background: var(--panel); color: var(--ink); }
-.lab-gradient-preset[aria-pressed="true"] { border-color: var(--accent); }
-.lab-gradient-preset span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.lab-gradient-thumb { border-radius: 5px; }
-.lab-gradient-swatch-library summary {
-  color: var(--accent);
-  font-size: 11.5px;
-  font-weight: 550;
-  cursor: pointer;
-}
-.lab-gradient-swatch-library[open] summary { margin-bottom: 8px; }
-.lab-gradient-swatch-grid {
-  display: grid;
-  grid-template-columns: repeat(8, minmax(0, 1fr));
-  gap: 4px;
-  max-height: min(225px, 34dvh);
-  margin-top: 8px;
-  padding: 4px;
-  overflow: auto;
-  scrollbar-width: thin;
-}
-.lab-gradient-swatch {
-  min-width: 0;
-  aspect-ratio: 1;
-  padding: 0;
-  border: 1px solid var(--line);
-  border-radius: 5px;
-  background: var(--swatch);
-  cursor: pointer;
-}
-.lab-gradient-swatch[aria-pressed="true"] { outline: 2px solid var(--accent); outline-offset: 0; }
-
 .lab-orb-toggle {
   appearance: none;
   display: grid;
