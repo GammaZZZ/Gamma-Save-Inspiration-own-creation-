@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>设计工具索引</title>
-<link rel="stylesheet" href="./lab/gallery.css">
+<link rel="stylesheet" href="./lab/gallery.css?v=2">
 <style>
 :root{
   --bg:#FFFFFF; --side:#F7F9FC; --panel:#EDF1F7; --tile:#EFF2F7; --hover:#F0F4FA;
@@ -39,7 +39,7 @@ body{margin:0;color:var(--ink);font-family:var(--f);
   font-size:13px;line-height:1.5;-webkit-font-smoothing:antialiased;letter-spacing:-.003em;
   background:var(--edge)}
 .page{position:relative;z-index:1;max-width:1060px;margin:22px auto;background:var(--bg);
-  min-height:calc(100vh - 44px);border-radius:18px;overflow:hidden;
+  min-height:calc(100vh - 44px);border-radius:18px;overflow:clip;
   box-shadow:0 0 0 1px var(--line),0 10px 44px rgba(20,20,40,.09)}
 a{color:inherit;text-decoration:none}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:8px}
@@ -47,8 +47,8 @@ a{color:inherit;text-decoration:none}
 .shell{display:grid;grid-template-columns:218px minmax(0,1fr);min-height:calc(100vh - 44px)}
 
 /* ---------- sidebar ---------- */
-.side{position:sticky;top:0;height:calc(100vh - 44px);overflow-y:auto;background:var(--side);
-  border-right:1px solid var(--line);padding:16px 12px 12px;
+.side{min-width:0;background:var(--side);border-right:1px solid var(--line)}
+.side-inner{position:sticky;top:0;height:calc(100dvh - 44px);overflow-y:auto;padding:16px 12px 12px;
   display:flex;flex-direction:column;gap:10px}
 .brandrow{display:flex;align-items:center;gap:10px;padding:0 4px}
 .mark{flex:none;width:38px;height:38px;border-radius:50%;object-fit:cover;
@@ -229,9 +229,8 @@ section{padding-top:26px;animation:rise .34s cubic-bezier(.2,.8,.3,1) both}
 @media (max-width:860px){
   .page{margin:0;border-radius:0;min-height:100vh}
   .shell{grid-template-columns:1fr;min-height:0}
-  .side{height:auto}
-  .side{position:static;height:auto;border-right:0;border-bottom:1px solid var(--line);
-    padding:18px 16px;gap:14px}
+  .side{border-right:0;border-bottom:1px solid var(--line)}
+  .side-inner{position:static;height:auto;overflow:visible;padding:18px 16px;gap:14px}
   .mark{width:38px;height:38px}
   .nav{flex-direction:row;flex-wrap:wrap;gap:4px;margin-top:0}
   .nav button{width:auto;padding:5px 9px;font-size:12px}
@@ -249,16 +248,18 @@ section{padding-top:26px;animation:rise .34s cubic-bezier(.2,.8,.3,1) both}
 <div class="page">
 <div class="shell">
   <aside class="side">
-    <div class="brandrow">
-      <img class="mark" src="data:image/webp;base64,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" alt="">
-      <div>
-        <div class="brand">设计工具索引</div>
-        <div class="tagline">做设计和写界面时要用的网站，按用途分好类，随手找随手开。</div>
+    <div class="side-inner">
+      <div class="brandrow">
+        <img class="mark" src="data:image/webp;base64,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" alt="">
+        <div>
+          <div class="brand">设计工具索引</div>
+          <div class="tagline">做设计和写界面时要用的网站，按用途分好类，随手找随手开。</div>
+        </div>
       </div>
+      <hr>
+      <nav class="nav" id="nav"></nav>
+      <div class="side-foot" id="dbState"></div>
     </div>
-    <hr>
-    <nav class="nav" id="nav"></nav>
-    <div class="side-foot" id="dbState"></div>
   </aside>
 
   <div>

@@ -1,22 +1,11 @@
 .lab-gallery {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 18px;
+  gap: 22px 20px;
 }
 
 .lab-card {
   min-width: 0;
-  padding: 7px;
-  border: 1px solid var(--line);
-  border-radius: 18px;
-  background: var(--bg);
-  transition: border-color .16s ease, box-shadow .16s ease;
-}
-
-.lab-card:hover,
-.lab-card:focus-within {
-  border-color: color-mix(in srgb, var(--accent) 25%, var(--line));
-  box-shadow: 0 5px 20px rgba(29, 49, 80, .07);
 }
 
 .lab-stage {
@@ -33,6 +22,7 @@
 .lab-stage--tile {
   height: clamp(170px, 24vw, 236px);
   padding: 18px;
+  border-radius: 14px;
 }
 
 .lab-stage--modal {
@@ -80,7 +70,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding: 10px 6px 5px;
+  padding: 8px 0 0 2px;
 }
 
 .lab-card-info h3,
@@ -91,7 +81,20 @@
   font-size: 11.5px;
   color: var(--ink-2);
 }
-.lab-card-info button { flex: none; }
+.lab-card-info .lab-compact {
+  flex: none;
+  min-height: 32px;
+  padding: 4px 4px 4px 8px;
+  background: transparent;
+  color: var(--ink-2);
+  font-size: 11.5px;
+  font-weight: 500;
+}
+.lab-card-info .lab-compact:hover {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
 
 .lab-dialog {
   position: fixed;
@@ -303,10 +306,6 @@ html.lab-dialog-open { overflow: hidden; }
   .lab-workspace { grid-row: 3; }
   .lab-controls { grid-row: 4; }
   .lab-detail-footer { grid-row: 5; padding: 0 9px 6px; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .lab-card { transition: none; }
 }
 
 .lab-preview-panel {
