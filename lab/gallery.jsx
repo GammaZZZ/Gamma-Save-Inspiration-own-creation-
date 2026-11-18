@@ -4,7 +4,8 @@ import DotPortrait from "./sources/DotPortrait.tsx";
 import HoverBloomText from "./sources/HoverBloomText.tsx";
 import { LiquidOrb, PALETTES } from "./sources/LiquidOrb.jsx";
 import { AsciiPortrait } from "./sources/AsciiPortrait.jsx";
-import GradientBackground, { defaultGradient } from "./sources/GradientBackground.tsx";
+import GradientBackground from "./sources/GradientBackground.tsx";
+import { gradientPresets, gradientSwatchRows } from "./sources/gradient-presets.js";
 
 export const components = [
   {
@@ -47,7 +48,7 @@ export const components = [
     hint: "调整渐变、色标和纹理",
     description: "由多层渐变叠出的背景。选中一层，调整颜色、渐变类型和纹理。",
     keywords: "GradientBackground React Canvas 渐变 背景 纹理 网格 丝绸",
-    files: ["GradientBackground.tsx"],
+    files: ["GradientBackground.tsx", "gradient-presets.js"],
   },
 ];
 
@@ -66,6 +67,12 @@ const GRADIENT_TEXTURES = {
   none: "无", grain: "颗粒", paper: "纸纹", fluted: "竖纹", scanline: "扫描线",
   grid: "网格", dots: "圆点", hatch: "交叉线", moire: "摩尔纹",
 };
+const GRADIENT_SWATCHES = gradientSwatchRows.flat();
+
+function gradientSettings(presetIndex) {
+  const { config } = gradientPresets[presetIndex];
+  return { presetIndex, config, layerId: config.layers[0].id, colorIndex: 0 };
+}
 
 function defaults(id) {
   if (id === "liquid-orb") {
@@ -82,7 +89,7 @@ function defaults(id) {
     return { theme: "Paper", glyphs: "Classic", size: 4.5, ripple: true, original: false };
   }
   if (id === "gradient-background") {
-    return { layerId: defaultGradient.layers[0].id, config: defaultGradient };
+    return gradientSettings(0);
   }
   return { text: BLOOM_LINES.join("\n"), active: true };
 }
@@ -222,19 +229,52 @@ function Range({ label, value, min, max, step, unit, onChange }) {
   );
 }
 
+function GradientPresets({ selected, onSelect }) {
+  const [expanded, setExpanded] = useState(false);
+  const listId = useId();
+
+  return (
+    <div className="lab-gradient-presets" role="region" aria-label="色系预设">
+      <div className="lab-gradient-presets-bar">
+        <h3>色系预设</h3>
+        <button type="button" className="lab-compact" aria-expanded={expanded} aria-controls={listId}
+                onClick={() => setExpanded(value => !value)}>
+          {expanded ? "收起" : `查看全部 ${gradientPresets.length} 套`}
+        </button>
+      </div>
+      <div id={listId} className={"lab-gradient-preset-list" + (expanded ? " expanded" : "")}>
+        {gradientPresets.map(({name, config}, index) => (
+          <button key={name} type="button" className="lab-gradient-preset"
+                  aria-pressed={index === selected} onClick={() => onSelect(index)}>
+            <GradientBackground config={config} width={116} height={62} className="lab-gradient-thumb" />
+            <span>{name}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function GradientControls({ settings, change }) {
-  const { config, layerId } = settings;
+  const { config, layerId, colorIndex } = settings;
   const layer = config.layers.find(entry => entry.id === layerId);
+  const layerOptions = Object.fromEntries(config.layers.map(({id, name}) => [id, GRADIENT_LAYERS[id] ?? name]));
 
   function editLayer(patch) {
     const layers = config.layers.map(entry => entry.id === layerId ? {...entry, ...patch} : entry);
     change({ config: {...config, layers} });
   }
 
+  function setColor(index, value) {
+    const colors = [...layer.colors];
+    colors[index] = value;
+    editLayer({ colors });
+  }
+
   return (
     <div className="lab-controls">
-      <Segments label="图层" options={GRADIENT_LAYERS} value={layerId}
-                onChange={id => change({layerId: id})} />
+      <Segments label="图层" options={layerOptions} value={layerId}
+                onChange={id => change({layerId: id, colorIndex: 0})} />
       <label className="lab-control-row">
         <span>渐变类型</span>
         <select value={layer.effect} onChange={event => editLayer({effect: event.target.value})}>
@@ -256,14 +296,28 @@ function GradientControls({ settings, change }) {
         <div className="lab-swatches" role="group" aria-label="当前图层的色标">
           {layer.colors.map((color, index) => (
             <input key={index} type="color" className="lab-color-input" aria-label={`色标 ${index + 1}`}
-                   value={color} onChange={event => {
-                     const colors = [...layer.colors];
-                     colors[index] = event.target.value;
-                     editLayer({colors});
-                   }} />
+                   value={color} onFocus={() => change({colorIndex: index})}
+                   onChange={event => setColor(index, event.target.value)} />
           ))}
         </div>
       </div>
+      <details className="lab-gradient-swatch-library">
+        <summary>色库 · {GRADIENT_SWATCHES.length} 色</summary>
+        <label className="lab-control-row">
+          <span>应用到</span>
+          <select value={colorIndex} onChange={event => change({colorIndex: Number(event.target.value)})}>
+            {layer.colors.map((color, index) => <option key={index} value={index}>色标 {index + 1} · {color}</option>)}
+          </select>
+        </label>
+        <div className="lab-gradient-swatch-grid" role="group" aria-label="可选颜色">
+          {GRADIENT_SWATCHES.map(color => (
+            <button key={color} type="button" className="lab-gradient-swatch"
+                    style={{"--swatch": color}} aria-label={`应用 ${color}`} title={color}
+                    aria-pressed={color.toLowerCase() === layer.colors[colorIndex].toLowerCase()}
+                    onClick={() => setColor(colorIndex, color)} />
+          ))}
+        </div>
+      </details>
       <label className="lab-control-row">
         <span>显示图层</span>
         <input type="checkbox" checked={layer.visible}
@@ -429,6 +483,7 @@ function Playground({ item, onClose }) {
   const dialog = useRef(null);
   const [view, setView] = useState("preview");
   const [settings, setSettings] = useState(() => defaults(item.id));
+  const isGradient = item.id === "gradient-background";
   function change(patch) { setSettings(current => ({...current, ...patch})); }
 
   useEffect(() => {
@@ -467,11 +522,20 @@ function Playground({ item, onClose }) {
               ))}
             </div>
             <button type="button" className="lab-compact"
-                    onClick={() => { setSettings(defaults(item.id)); setView("preview"); }}>重置</button>
+                    onClick={() => {
+                      setSettings(isGradient ? gradientSettings(settings.presetIndex) : defaults(item.id));
+                      setView("preview");
+                    }}>重置</button>
           </div>
           <div id="lab-preview-panel" role="tabpanel" aria-labelledby="lab-preview-tab"
-               className="lab-preview-panel" hidden={view !== "preview"}>
-            {view === "preview" && <Preview item={item} settings={settings} />}
+               className={"lab-preview-panel" + (isGradient ? " lab-preview-panel--gradient" : "")}
+               hidden={view !== "preview"}>
+            {view === "preview" && <>
+              <Preview item={item} settings={settings} />
+              {isGradient && (
+                <GradientPresets selected={settings.presetIndex} onSelect={index => setSettings(gradientSettings(index))} />
+              )}
+            </>}
           </div>
           {view === "code" ? <SourcePanel item={item} /> :
             <div id="lab-source-panel" role="tabpanel" aria-labelledby="lab-code-tab" hidden />}
